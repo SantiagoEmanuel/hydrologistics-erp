@@ -1,0 +1,9 @@
+{
+  "name": "hydrologistics-monorepo",
+  "private": true,
+  "scripts": {
+    "dev:client": "pnpm --filter client dev",
+    "dev:server": "pnpm --filter server dev",
+    "dev": "pnpm -r dev"
+  }
+}
