@@ -27,17 +27,22 @@ export const shiftService = {
     return await res.json();
   },
 
-  closeShift: async (
-    shiftId: string,
-    finalAmount: number,
-    observations?: string,
-  ) => {
+  closeShift: async (payload: {
+    shiftId: string;
+    finalAmount: number;
+    observations?: string;
+  }) => {
     const res = await fetch(`${API_URL}/shifts/close`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ shiftId, finalAmount, observations }),
+      body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error("Error al cerrar caja");
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "Error al cerrar caja");
+    }
+
     return await res.json();
   },
 

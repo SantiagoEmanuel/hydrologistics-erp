@@ -1,3 +1,4 @@
+import CloseShiftModal from "@/components/CloseShiftModal";
 import PendingSaleCard from "@/components/PendingSaleCard";
 import MovementModal from "@/components/shift/MovementModal";
 import { shiftService } from "@/services/shift.service";
@@ -16,6 +17,7 @@ export default function Dashboard() {
   const [movements, setMovements] = useState<CashMovement[]>([]);
   const [showMovementModal, setShowMovementModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showCloseModal, setShowCloseModal] = useState(false);
 
   const loadDashboardData = async () => {
     try {
@@ -133,6 +135,25 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col gap-6 p-4">
+      <header className="mb-2 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Panel de Control</h1>
+          <p className="text-sm text-gray-500">
+            {currentShift
+              ? `Turno Abierto: ${new Date(currentShift.openedAt).toLocaleTimeString()}`
+              : "🔴 Caja Cerrada"}
+          </p>
+        </div>
+
+        {currentShift && (
+          <button
+            onClick={() => setShowCloseModal(true)}
+            className="flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 font-bold text-white shadow-lg transition-all hover:bg-gray-800 active:scale-95"
+          >
+            🔒 CERRAR CAJA
+          </button>
+        )}
+      </header>
       <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
@@ -339,8 +360,17 @@ export default function Dashboard() {
           </div>
         </aside>
       </section>
-
       {showMovementModal && <MovementModal onClose={handleMovementSaved} />}
+      {showCloseModal && (
+        <CloseShiftModal
+          onClose={() => setShowCloseModal(false)}
+          onSuccess={() => {
+            loadDashboardData();
+            setShowCloseModal(false);
+            window.location.reload();
+          }}
+        />
+      )}
     </div>
   );
 }
