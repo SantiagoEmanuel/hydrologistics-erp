@@ -109,9 +109,7 @@ shiftsRouter.post("/close", async (req, res) => {
 
   try {
     const salesResult = await db
-      .select({
-        total: sql<number>`sum(${sales.totalAmount})`,
-      })
+      .select({ total: sql<number>`sum(${sales.totalAmount})` })
       .from(sales)
       .where(eq(sales.shiftId, shiftId));
 
@@ -132,14 +130,14 @@ shiftsRouter.post("/close", async (req, res) => {
     const shift = await db.query.cashShifts.findFirst({
       where: eq(cashShifts.id, shiftId),
     });
+
     if (!shift) return res.status(404).json({ error: "Turno no encontrado" });
 
     const expectedAmount =
       (shift.initialAmount || 0) + totalSales + totalIn - totalOut;
-
     const difference = finalAmount - expectedAmount;
 
-    const [closedShift] = await db
+    await db
       .update(cashShifts)
       .set({
         closedAt: new Date(),
@@ -149,10 +147,27 @@ shiftsRouter.post("/close", async (req, res) => {
         observations,
         status: "CLOSED",
       })
-      .where(eq(cashShifts.id, shiftId))
-      .returning();
+      .where(eq(cashShifts.id, shiftId));
 
-    res.json(closedShift);
+    const fullReportData = await db.query.cashShifts.findFirst({
+      where: eq(cashShifts.id, shiftId),
+      with: {
+        movements: true,
+
+        sales: {
+          orderBy: (sales, { desc }) => [desc(sales.createdAt)],
+          with: {
+            client: true,
+            paymentMethods: true,
+            items: {
+              with: { product: true },
+            },
+          },
+        },
+      },
+    });
+
+    res.json(fullReportData);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error al cerrar caja" });
