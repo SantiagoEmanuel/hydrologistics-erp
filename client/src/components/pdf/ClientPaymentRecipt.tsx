@@ -1,10 +1,8 @@
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
-// Estilos profesionales y limpios
 const styles = StyleSheet.create({
   page: { padding: 40, fontSize: 10, fontFamily: "Helvetica", color: "#333" },
 
-  // Encabezado con Marca
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -31,7 +29,6 @@ const styles = StyleSheet.create({
   metaLabel: { fontSize: 8, color: "#888", marginBottom: 2 },
   metaValue: { fontSize: 10, fontWeight: "bold" },
 
-  // Cuerpo del Recibo (Quién paga y cuánto)
   body: {
     marginVertical: 20,
     padding: 15,
@@ -50,7 +47,6 @@ const styles = StyleSheet.create({
   value: { fontSize: 12, color: "#000", flex: 1 },
   amountValue: { fontSize: 18, fontWeight: "bold", color: "#059669" },
 
-  // Sección de Estado de Cuenta (Vital para fiados)
   accountSection: {
     marginTop: 10,
     borderTopWidth: 1,
@@ -82,7 +78,6 @@ const styles = StyleSheet.create({
   tr: { width: "100%", flexDirection: "row", paddingTop: 5 },
   td: { flex: 1, fontSize: 11, textAlign: "right", fontWeight: "bold" },
 
-  // Footer y Firmas
   signatures: {
     marginTop: 60,
     flexDirection: "row",
@@ -115,13 +110,13 @@ const formatMoney = (val: number) =>
 
 export interface PaymentReceiptData {
   receiptNumber: string;
-  date: string; // ISO String
+  date: string;
   clientName: string;
   clientType?: string;
   amount: number;
-  method: string; // Efectivo, Transferencia
-  previousBalance: number; // Deuda antes del pago
-  newBalance: number; // Deuda después del pago
+  method: string;
+  previousBalance: number;
+  newBalance: number;
   notes?: string;
 }
 
@@ -140,8 +135,7 @@ export default function ClientPaymentReceipt({ data }: Props) {
 
   return (
     <Document>
-      <Page size="A5" orientation="landscape" style={styles.page}>
-        {/* HEADER */}
+      <Page size="A4" orientation="landscape" style={styles.page}>
         <View style={styles.header}>
           <View>
             <Text style={styles.companyName}>HYDROLOGISTICS</Text>
@@ -155,7 +149,6 @@ export default function ClientPaymentReceipt({ data }: Props) {
           </View>
         </View>
 
-        {/* DETALLE DEL PAGO */}
         <View style={styles.body}>
           <View style={styles.row}>
             <Text style={styles.label}>Recibí de:</Text>
@@ -194,7 +187,6 @@ export default function ClientPaymentReceipt({ data }: Props) {
           )}
         </View>
 
-        {/* ESTADO DE CUENTA (EL CORAZÓN DEL FIADO) */}
         <View style={styles.accountSection}>
           <Text style={styles.accountTitle}>Estado de Cuenta Corriente</Text>
 
@@ -225,7 +217,6 @@ export default function ClientPaymentReceipt({ data }: Props) {
           </View>
         </View>
 
-        {/* FIRMAS */}
         <View style={styles.signatures}>
           <View style={styles.signLine}>
             <Text style={styles.signLabel}>
@@ -237,7 +228,6 @@ export default function ClientPaymentReceipt({ data }: Props) {
           </View>
         </View>
 
-        {/* FOOTER */}
         <View style={styles.footer}>
           <Text>
             Comprobante generado por Sistema Hydrologistics - Válido como
