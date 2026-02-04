@@ -51,6 +51,69 @@ authRouter.post("/login", async (req, res) => {
   }
 });
 
+authRouter.post("/register", async (req, res) => {
+  /*
+  Body esperado 
+  {
+    username: string
+    fullName: string
+    password: string,
+    role?: default "EMPLOYEE"
+  }
+  */
+
+  const { username, fullName, password, role } = req.body;
+
+  if (!username || !fullName || !password) {
+    return res
+      .status(400)
+      .json({ error: "Error al ingresar los datos del usuario" });
+  }
+
+  try {
+    const passwordHashed = bcrypt.hashSync(password, 10);
+
+    const [newUser] = await db
+      .insert(users)
+      .values({
+        username,
+        fullName,
+        password: passwordHashed,
+        role: role ?? null,
+      })
+      .returning();
+
+    if (!newUser) {
+      return res.status(400).json({
+        error: "Error al crear el usuario",
+      });
+    }
+    const token = jwt.sign(
+      { id: newUser.id, role: newUser.role, name: newUser.fullName },
+      SECRET_KEY,
+      { expiresIn: "12h" },
+    );
+
+    res.cookie("auth_token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 12 * 60 * 60 * 1000,
+    });
+
+    res.json({
+      id: newUser.id,
+      username: newUser.username,
+      fullName: newUser.fullName,
+      role: newUser.role,
+    });
+  } catch {
+    return res.status(500).json({
+      error: "Error al crear el usuario",
+    });
+  }
+});
+
 authRouter.post("/logout", (req, res) => {
   res.clearCookie("auth_token");
   res.json({ message: "Sesión cerrada" });
@@ -77,20 +140,6 @@ authRouter.get("/me", async (req, res) => {
   } catch (error) {
     res.status(401).json({ error: "Token inválido" });
   }
-});
-
-authRouter.post("/register-first-admin", async (req, res) => {
-  const { username, password, fullName } = req.body;
-  const hash = await bcrypt.hash(password, 10);
-
-  await db.insert(users).values({
-    username,
-    password: hash,
-    fullName,
-    role: "ADMIN",
-  });
-
-  res.json({ message: "Admin creado" });
 });
 
 export default authRouter;
