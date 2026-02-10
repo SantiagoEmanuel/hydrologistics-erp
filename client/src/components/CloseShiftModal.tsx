@@ -46,8 +46,6 @@ export default function CloseShiftModal({ onClose, onSuccess }: Props) {
         observations,
       });
 
-      console.log("Respuesta del cierre:", response); // Para depuración
-
       setReportData(response);
       toast.success("Caja cerrada correctamente");
       setStep("SUCCESS");
