@@ -1,11 +1,11 @@
 export interface Product {
-  id: number;
+  id: string;
   name: string;
-  price: number;
-  wholesalePrice: number;
-  isRefill: boolean;
-  isActive: boolean;
+  price: number; // Precio Público / Final
+  wholesalePrice: number; // Precio Revendedor <--- AGREGAR ESTO
   stock: number;
   trackStock: boolean;
-  dailyResetStock: number | null;
+  isRefill: boolean;
+  isReturnable: boolean;
+  isActive: boolean;
 }
