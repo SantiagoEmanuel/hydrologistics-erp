@@ -1,8 +1,10 @@
+import dotenv from "dotenv";
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 
-const SECRET_KEY =
-  process.env.JWT_SECRET || "secreto_super_seguro_cambiar_en_prod";
+dotenv.config();
+
+const SECRET_KEY = process.env.JWT_SECRET!;
 
 declare global {
   namespace Express {
