@@ -16,7 +16,6 @@ export default function CreateRouteModal({
   const [selectedProduct, setSelectedProduct] = useState("");
   const [quantity, setQuantity] = useState("");
 
-  // Lista temporal de carga
   const [loadItems, setLoadItems] = useState<
     { productId: number; name: string; quantity: number }[]
   >([]);
@@ -26,11 +25,10 @@ export default function CreateRouteModal({
   const [selectedScheme, setSelectedScheme] = useState("1");
 
   useEffect(() => {
-    // Asumiendo que creas un endpoint GET /api/pricing-schemes
-    // O hardcodealo temporalmente si tienes prisa:
     setSchemes([
       { id: 1, name: "Oficial (Incentivos)" },
       { id: 2, name: "Negocios (Fijo)" },
+      { id: 3, name: "Rayo Pub Dance" },
     ]);
   }, []);
 
@@ -39,7 +37,6 @@ export default function CreateRouteModal({
     const prod = products.find((p) => p.id === Number(selectedProduct));
     if (!prod) return;
 
-    // Agregar o sumar si ya existe
     setLoadItems((prev) => {
       const exists = prev.find((i) => i.productId === prod.id);
       if (exists) {
@@ -86,7 +83,6 @@ export default function CreateRouteModal({
         </header>
 
         <div className="flex flex-col gap-4 p-6">
-          {/* Chofer */}
           <div>
             <label className="mb-1 block text-sm font-semibold">
               Nombre del Chofer
@@ -114,7 +110,6 @@ export default function CreateRouteModal({
               ))}
             </select>
           </div>
-          {/* Agregar Productos */}
           <div className="rounded border bg-gray-50 p-4">
             <h3 className="mb-2 text-sm font-bold text-gray-700">
               Cargar Camioneta
@@ -150,7 +145,6 @@ export default function CreateRouteModal({
             </div>
           </div>
 
-          {/* Lista de Items */}
           <div className="max-h-40 overflow-y-auto">
             {loadItems.map((item, idx) => (
               <div
