@@ -25,7 +25,16 @@ export default function Dashboard() {
       const shiftData = await shiftService.getCurrent();
 
       if (shiftData.status === "OPEN" && shiftData.shift) {
-        setSales(shiftData.shift.sales || []);
+        // --- CORRECCIÓN AQUÍ: DEDUPLICACIÓN DE VENTAS ---
+        // Usamos un Map para filtrar ventas duplicadas basadas en su ID.
+        // Esto corrige el problema visual si el backend devuelve filas repetidas por los items.
+        const uniqueSales = Array.from(
+          new Map(
+            (shiftData.shift.sales || []).map((sale: Sale) => [sale.id, sale]),
+          ).values(),
+        );
+
+        setSales(uniqueSales);
         setMovements(shiftData.shift.movements || []);
       } else {
         setSales([]);
@@ -60,19 +69,44 @@ export default function Dashboard() {
       .reduce((acc, m) => acc + m.amount, 0);
 
     const initial = currentShift?.initialAmount || 0;
+
+    // Filtramos las ventas que realmente afectan la caja física (Efectivo/Cash)
     const cashSalesMoney = paidSales
       .filter((s) => {
         const method = s.paymentMethods?.name?.toUpperCase();
-        return !method || method === "EFECTIVO";
+        return (
+          !method ||
+          method.includes("EFECTIVO") || // .includes es más seguro que ===
+          method.includes("DONACION") ||
+          method === "CASH"
+        );
       })
       .reduce((acc, s) => acc + s.totalAmount, 0);
 
     const theoreticalCash = initial + cashSalesMoney + totalIn - totalOut;
 
-    const countResellers = paidSales.filter(
-      (s) => s.client?.type === "REVENDEDOR",
-    ).length;
-    const countFinal = paidSales.length - countResellers;
+    const amount = {
+      revendedor: 0,
+      final: 0,
+    };
+
+    // Usamos forEach en lugar de map ya que no estamos retornando un array nuevo
+    paidSales.forEach((sale) => {
+      // Solo sumamos items si se pagó en efectivo (según tu lógica original)
+      // Ajusta esto si quieres contar items de transferencias también
+      if (sale.paymentMethods?.name?.toUpperCase() !== "EFECTIVO") return;
+
+      const itemCount = sale.items.reduce(
+        (prev, curr) => curr.quantity + prev,
+        0,
+      );
+
+      if (sale.client?.type == "REVENDEDOR") {
+        amount.revendedor += itemCount;
+      } else {
+        amount.final += itemCount;
+      }
+    });
 
     return {
       money: {
@@ -83,8 +117,8 @@ export default function Dashboard() {
       counts: {
         paid: paidSales.length,
         pending: pendingSales.length,
-        resellers: countResellers,
-        final: countFinal,
+        resellers: amount.revendedor,
+        final: amount.final,
       },
     };
   }, [sales, movements, currentShift]);
@@ -261,7 +295,7 @@ export default function Dashboard() {
                 0 ? (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={6}
                       className="p-8 text-center text-gray-400 italic"
                     >
                       La caja está abierta, pero aún no hay ventas cobradas.
@@ -286,11 +320,13 @@ export default function Dashboard() {
                           #{sale.ticketCode}
                         </td>
                         <td className="px-6 py-3 font-bold text-gray-800">
-                          {sale.items.map((item) => (
-                            <span>
-                              {item.product.name} x {item.quantity}
-                            </span>
-                          ))}
+                          <div className="flex flex-col gap-1">
+                            {sale.items.map((item) => (
+                              <span key={item.id} className="text-xs">
+                                {item.product.name} x {item.quantity}
+                              </span>
+                            ))}
+                          </div>
                         </td>
                         <td className="px-6 py-3">
                           {sale.client ? (
