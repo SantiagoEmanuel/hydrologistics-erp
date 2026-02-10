@@ -1,8 +1,7 @@
-POST http://localhost:3000/api/auth/register-first-admin
+POST http://localhost:3000/api/auth/login
 Content-Type: application/json
 
 {
-     "username": "santiago",
-     "password": "1145",
-     "fullName": "Santiago Mustafa"
+     "username": "",
+     "password": ""
 }
