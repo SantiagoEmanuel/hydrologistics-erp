@@ -35,7 +35,7 @@ authRouter.post("/login", async (req, res) => {
     res.cookie("auth_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: process.env.NODE_ENV !== "production" ? "lax" : "none",
       maxAge: 12 * 60 * 60 * 1000,
     });
 
@@ -52,16 +52,6 @@ authRouter.post("/login", async (req, res) => {
 });
 
 authRouter.post("/register", async (req, res) => {
-  /*
-  Body esperado 
-  {
-    username: string
-    fullName: string
-    password: string,
-    role?: default "EMPLOYEE"
-  }
-  */
-
   const { username, fullName, password, role } = req.body;
 
   if (!username || !fullName || !password) {
@@ -97,7 +87,7 @@ authRouter.post("/register", async (req, res) => {
     res.cookie("auth_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: process.env.NODE_ENV !== "production" ? "lax" : "none",
       maxAge: 12 * 60 * 60 * 1000,
     });
 
@@ -125,20 +115,38 @@ authRouter.get("/me", async (req, res) => {
 
   try {
     const decoded = jwt.verify(token, SECRET_KEY) as any;
+
     const user = await db.query.users.findFirst({
       where: eq(users.id, decoded.id),
+      columns: {
+        id: true,
+        username: true,
+        fullName: true,
+        role: true,
+        isActive: true,
+      },
     });
 
-    if (!user) return res.status(401).json({ error: "Usuario no encontrado" });
+    if (!user || !user.isActive) {
+      res.clearCookie("auth_token");
+      return res
+        .status(401)
+        .json({ error: "Usuario no encontrado o inactivo" });
+    }
 
-    res.json({
-      id: user.id,
-      username: user.username,
-      fullName: user.fullName,
-      role: user.role,
-    });
+    res.json(user);
   } catch (error) {
+    res.clearCookie("auth_token");
     res.status(401).json({ error: "Token inválido" });
+  }
+});
+
+authRouter.get("/all", async (req, res) => {
+  try {
+    const response = await db.select().from(users);
+    return res.json(response);
+  } catch {
+    res.status(500).json({ error: "No se pudieron obtener los usuarios" });
   }
 });
 
