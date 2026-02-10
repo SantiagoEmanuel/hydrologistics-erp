@@ -443,7 +443,7 @@ export default function CloseShiftDocument({ data }: Props) {
                   <Text style={styles.colTime}>
                     {formatTime(sale.createdAt)}
                   </Text>
-                  <Text style={{ width: "16%" }}>#{sale.ticketCode}</Text>
+                  <Text style={{ width: "20%" }}>#{sale.ticketCode}</Text>
                   <Text style={{ width: "35%" }}>
                     {sale.client?.name || "Consumidor Final"}
                   </Text>
