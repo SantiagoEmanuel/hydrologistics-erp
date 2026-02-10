@@ -1,7 +1,6 @@
+import { api } from "@/lib/api-client";
 import type { CartItem } from "@/store/useCartStore";
 import type { Sale } from "@/types/sale.types";
-
-const API_URL = import.meta.env.VITE_API_URL;
 
 export const saleService = {
   saveSale: async (
@@ -15,11 +14,8 @@ export const saleService = {
       quantity: item.quantity,
     }));
 
-    const response = await fetch(`${API_URL}/sales`, {
+    const response = await api(`/sales`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify({
         items: itemsPayload,
         clientId,
@@ -28,39 +24,27 @@ export const saleService = {
       }),
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error);
-    }
-    return await response.json();
+    return await response;
   },
 
   getHistory: async (from?: string, to?: string): Promise<Sale[]> => {
-    // Construir query string: ?from=2026-01-20&to=2026-01-21
     const params = new URLSearchParams();
     if (from) params.append("from", from);
     if (to) params.append("to", to);
 
-    const res = await fetch(`${API_URL}/sales?${params.toString()}`);
-    if (!res.ok) throw new Error("Error al obtener historial");
-    return await res.json();
+    const res = await api(`/sales?${params.toString()}`);
+    return await res;
   },
 
-  // Nuevo método
   cancelSale: async (id: string) => {
-    const res = await fetch(`${API_URL}/sales/${id}`, {
-      method: "DELETE", // Ojo: Express lo manejará como DELETE aunque sea soft delete
+    await api(`/sales/${id}`, {
+      method: "DELETE",
     });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || "Error al anular");
-    }
   },
 
   getPaymentMethods: async () => {
-    const res = await fetch(`${API_URL}/sales/get-payments-methods`);
-    if (!res.ok) throw new Error("Error al obtener los métodos de pago");
-    return await res.json();
+    const res = await api(`/sales/get-payments-methods`);
+    return res;
   },
 
   paidSale: async (
@@ -68,24 +52,15 @@ export const saleService = {
     paymentMethodId: number,
     shiftId: string,
   ): Promise<Sale> => {
-    const res = await fetch(`${API_URL}/sales/${id}/paid-sale`, {
+    const res = await api(`/sales/${id}/paid-sale`, {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify({
         paymentMethodId,
         shiftId,
       }),
     });
 
-    if (!res.ok) {
-      throw new Error("Error al actualizar el estado");
-    }
-
-    const data = await res.json();
-
-    return data;
+    return res;
   },
 
   saveInLocalStorage: async (

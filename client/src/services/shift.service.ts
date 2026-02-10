@@ -1,30 +1,23 @@
+import { api } from "@/lib/api-client";
 import type { Shift, ShiftStatusResponse } from "@/types/shift.types";
-
-const API_URL = import.meta.env.VITE_API_URL;
 
 export const shiftService = {
   getCurrent: async (): Promise<ShiftStatusResponse> => {
-    const res = await fetch(`${API_URL}/shifts/current`);
+    const res = await api(`/shifts/current`);
     if (res.status === 404) return { status: "CLOSED" };
-    if (!res.ok) throw new Error("Error al verificar caja");
-
-    return await res.json();
+    return res;
   },
 
   openShift: async (
     initialAmount: number,
     operatorName: string,
   ): Promise<Shift> => {
-    const res = await fetch(`${API_URL}/shifts/open`, {
+    const res = await api(`/shifts/open`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ initialAmount, operatorName }),
     });
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.error || "Error al abrir caja");
-    }
-    return await res.json();
+
+    return res;
   },
 
   closeShift: async (payload: {
@@ -32,18 +25,12 @@ export const shiftService = {
     finalAmount: number;
     observations?: string;
   }) => {
-    const res = await fetch(`${API_URL}/shifts/close`, {
+    const res = await api(`/shifts/close`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.error || "Error al cerrar caja");
-    }
-
-    return await res.json();
+    return res;
   },
 
   addMovement: async (data: {
@@ -51,12 +38,10 @@ export const shiftService = {
     amount: number;
     description: string;
   }) => {
-    const res = await fetch(`${API_URL}/shifts/movement`, {
+    const res = await api(`/shifts/movement`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error("Error al guardar movimiento");
-    return await res.json();
+    return await res;
   },
 };

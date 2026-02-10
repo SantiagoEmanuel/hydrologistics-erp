@@ -1,14 +1,10 @@
+import { api } from "@/lib/api-client";
 import type { Client } from "@/types/client.types";
-
-const API_URL = import.meta.env.VITE_API_URL;
 
 export const clientService = {
   getAll: async (): Promise<Client[]> => {
-    const response = await fetch(`${API_URL}/clients`);
-    if (!response.ok) {
-      throw new Error("Error al obtener clientes");
-    }
-    return await response.json();
+    const response = await api(`/clients`);
+    return response;
   },
   create: async ({
     name,
@@ -17,18 +13,11 @@ export const clientService = {
     name: string;
     type?: string;
   }): Promise<Client> => {
-    const response = await fetch(`${API_URL}/clients`, {
+    const response = await api(`/clients`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify({ name, type }),
     });
 
-    if (!response.ok) {
-      throw new Error("Error al crear cliente");
-    }
-
-    return await response.json();
+    return response;
   },
 };

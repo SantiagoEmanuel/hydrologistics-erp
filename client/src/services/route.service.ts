@@ -1,62 +1,44 @@
+import { api } from "@/lib/api-client";
 import type {
   CloseStockPayload,
   CreateRoutePayload,
   Route,
 } from "@/types/route.types";
 
-const API_URL = import.meta.env.VITE_API_URL;
-
 export const routeService = {
   getAll: async (): Promise<Route[]> => {
-    const res = await fetch(`${API_URL}/routes`);
-    if (!res.ok) throw new Error("Error al obtener rutas");
-    return await res.json();
+    const res = await api(`/routes`);
+    return await res;
   },
 
   create: async (data: CreateRoutePayload): Promise<Route> => {
-    const res = await fetch(`${API_URL}/routes`, {
+    const res = await api(`/routes`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.error || "Error al crear ruta");
-    }
-    return await res.json();
+    return await res;
   },
 
   closeStock: async (
     routeId: string,
     data: CloseStockPayload,
   ): Promise<void> => {
-    const res = await fetch(`${API_URL}/routes/${routeId}/close-stock`, {
+    const res = await api(`/routes/${routeId}/close-stock`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.error || "Error al cerrar stock");
-    }
+    return res;
   },
 
   previewSettlement: async (
     driverName: string,
     date: string,
   ): Promise<SettlementPreview> => {
-    const res = await fetch(`${API_URL}/routes/settle/preview`, {
+    const res = await api(`/routes/settle/preview`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ driverName, date }),
     });
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(
-        error.message || error.error || "Error al calcular rendición",
-      );
-    }
-    return await res.json();
+    return await res;
   },
 
   confirmSettlement: async (
@@ -64,15 +46,12 @@ export const routeService = {
     date: string,
     totalPayment: number,
   ): Promise<void> => {
-    const res = await fetch(`${API_URL}/routes/settle/confirm`, {
+    const res = await api(`/routes/settle/confirm`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ driverName, date, totalPayment }),
     });
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.message || "Error al confirmar pago");
-    }
+    return res;
   },
 };
 
