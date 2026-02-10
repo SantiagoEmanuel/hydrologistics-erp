@@ -1,11 +1,7 @@
 import { useShift } from "@/hook/useShift";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
-export default function ShiftGuard({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function ShiftGuard({ children }: { children: ReactNode }) {
   const { currentShift, isShiftLoading, openShift } = useShift();
 
   const [amount, setAmount] = useState("");
