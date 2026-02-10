@@ -15,7 +15,7 @@ export default function Item({
       className="flex cursor-pointer gap-3 rounded-lg border border-gray-200 bg-white p-2 transition-all duration-200 select-none hover:border-blue-400 hover:shadow-md active:scale-95"
     >
       <img
-        src="img-not-found.png"
+        src="/img-not-found.png"
         alt="Imagen no encontrada"
         title="Imagen no encontrada"
         className="size-16"
