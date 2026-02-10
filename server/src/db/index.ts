@@ -18,5 +18,3 @@ const client = createClient({
 });
 
 export const db = drizzle(client, { schema });
-
-console.log("🚀 Base de datos conectada");
