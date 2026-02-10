@@ -8,6 +8,9 @@ interface ProductState {
   isLoading: boolean;
   error: string | null;
 
+  createProduct: (product: Product) => Promise<void>;
+  updateProduct: () => Promise<void>;
+  deleteProduct: () => Promise<void>;
   fetchProducts: () => Promise<void>;
   updateProductStock: (id: number, adjustment: number) => Promise<void>;
 }
@@ -17,6 +20,34 @@ export const useProductStore = create<ProductState>((set, get) => ({
   isLoading: false,
   error: null,
 
+  createProduct: async (product) => {
+    set(() => ({
+      isLoading: true,
+    }));
+    if (!product) {
+      toast.error("Producto inválido");
+      set(() => ({
+        isLoading: false,
+      }));
+      return;
+    }
+
+    try {
+      const res = await productService.create(product);
+      if (!res) {
+        toast.error("No se pudo crear el producto");
+        throw new Error("No se pudo crear el producto");
+      }
+    } catch {
+      throw new Error("No se pudo crear el producto");
+    } finally {
+      set(() => ({
+        isLoading: false,
+      }));
+    }
+  },
+  updateProduct: async () => {},
+  deleteProduct: async () => {},
   fetchProducts: async () => {
     const currentProducts = get().products;
     if (currentProducts.length > 0) return;
@@ -36,7 +67,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
       set((state) => ({
         products: state.products.map((p) =>
-          p.id === id ? { ...p, stock: p.stock + adjustment } : p,
+          p.id === id.toString() ? { ...p, stock: p.stock + adjustment } : p,
         ),
       }));
 
