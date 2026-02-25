@@ -18,7 +18,7 @@ export default function CreateRouteModal({
   const [driverName, setDriverName] = useState(
     user?.role === "DRIVER" ? user.fullName : "",
   );
-  const [observations, setObservations] = useState("");
+  // const [observations, setObservations] = useState("");
   const [selectedScheme, setSelectedScheme] = useState("1");
 
   const [selectedProduct, setSelectedProduct] = useState("");
@@ -85,7 +85,7 @@ export default function CreateRouteModal({
     try {
       await routeService.create({
         driverName,
-        observations,
+        observations: "",
         pricingSchemeId: Number(selectedScheme),
         items: loadItems.map((i) => ({
           productId: i.productId,
