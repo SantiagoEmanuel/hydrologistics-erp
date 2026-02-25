@@ -86,7 +86,7 @@ export function CreateRouteSchemeModal({ onClose, onSuccess }: Props) {
       };
 
       // Asume que agregas este método a route.service.ts
-      await routeService.createScheme(payload);
+      await routeService.createSchema(payload);
 
       toast.success("Esquema creado correctamente");
       onSuccess();

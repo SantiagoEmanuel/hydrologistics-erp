@@ -76,6 +76,17 @@ export interface SettlementPreview {
   }[];
 }
 
+interface NewSchema {
+  name: string;
+  isActive: boolean;
+  tiers: {
+    productId: number;
+    minVolume: number;
+    maxVolume: number | null;
+    renderPrice: number;
+  }[];
+}
+
 export const routeService = {
   getAll: async (): Promise<Route[]> => {
     return await api(`/routes`);
@@ -89,7 +100,9 @@ export const routeService = {
     return await api(`/routes/schemas`);
   },
 
-  createSchema: async (data): Promise<void> => {},
+  createSchema: async (data: NewSchema): Promise<void> => {
+    console.log(data);
+  },
 
   create: async (data: CreateRoutePayload): Promise<Route> => {
     return await api(`/routes`, {

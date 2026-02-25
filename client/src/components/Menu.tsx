@@ -30,7 +30,7 @@ export function Menu({ onClick }: { onClick: () => void }) {
   );
 }
 
-export function MenuItem({ menuItem }: { menuItem: [] }) {
+export function MenuItem() {
   return (
     <div className="animate-in fade-in zoom-in-95 absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-xl">
       <button
