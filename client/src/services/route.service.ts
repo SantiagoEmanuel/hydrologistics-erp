@@ -77,6 +77,7 @@ export interface SettlementPreview {
 }
 
 interface NewSchema {
+  id: string;
   name: string;
   isActive: boolean;
   tiers: {
@@ -101,7 +102,17 @@ export const routeService = {
   },
 
   createSchema: async (data: NewSchema): Promise<void> => {
-    console.log(data);
+    return await api("/routes/schema", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  editSchema: async (data: NewSchema): Promise<void> => {
+    return await api(`/routes/schemas/${data.id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
   },
 
   create: async (data: CreateRoutePayload): Promise<Route> => {

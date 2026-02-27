@@ -7,6 +7,14 @@ import { toast } from "sonner";
 interface Props {
   onClose: () => void;
   onSuccess: () => void;
+  scheme: Scheme;
+}
+
+export interface Scheme {
+  id: number;
+  name: string;
+  isActive: boolean;
+  tiers: TierLocal[];
 }
 
 interface TierLocal {
@@ -17,13 +25,13 @@ interface TierLocal {
   renderPrice: number | "";
 }
 
-export function CreateRouteSchemeModal({ onClose, onSuccess }: Props) {
+export function EditRouteSchemeModal({ scheme, onClose, onSuccess }: Props) {
   const { products } = useProducts();
   const [loading, setLoading] = useState(false);
 
-  const [name, setName] = useState("");
-  const [isActive, setIsActive] = useState(true);
-  const [tiers, setTiers] = useState<TierLocal[]>([]);
+  const [name, setName] = useState(scheme.name);
+  const [isActive, setIsActive] = useState(scheme.isActive);
+  const [tiers, setTiers] = useState<TierLocal[]>(scheme.tiers);
 
   const handleAddTier = () => {
     setTiers((prev) => [
@@ -64,7 +72,7 @@ export function CreateRouteSchemeModal({ onClose, onSuccess }: Props) {
       if (tier.renderPrice === "" || Number(tier.renderPrice) < 0)
         return toast.error("Los precios de rendición no pueden estar vacíos.");
       if (
-        tier.maxVolume !== "" &&
+        tier.maxVolume === 0 &&
         Number(tier.maxVolume) <= Number(tier.minVolume)
       ) {
         return toast.error("El volumen máximo debe ser mayor al mínimo.");
@@ -74,9 +82,11 @@ export function CreateRouteSchemeModal({ onClose, onSuccess }: Props) {
     setLoading(true);
     try {
       const payload = {
+        id: scheme.id,
         name,
         isActive,
         tiers: tiers.map((t) => ({
+          id: t.id ?? crypto.randomUUID(),
           productId: Number(t.productId),
           minVolume: Number(t.minVolume),
           maxVolume: t.maxVolume === "" ? null : Number(t.maxVolume),
@@ -84,7 +94,7 @@ export function CreateRouteSchemeModal({ onClose, onSuccess }: Props) {
         })),
       };
 
-      await routeService.createSchema(payload);
+      await routeService.editSchema(payload);
 
       toast.success("Esquema creado correctamente");
       onSuccess();
@@ -102,7 +112,7 @@ export function CreateRouteSchemeModal({ onClose, onSuccess }: Props) {
         <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 p-5">
           <div>
             <h2 className="text-xl font-black tracking-tight text-gray-800">
-              Nuevo Esquema de Precios
+              Editando Esquema
             </h2>
             <p className="text-sm text-gray-500">
               Configura reglas de rendición por volumen.

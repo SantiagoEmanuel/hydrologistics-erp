@@ -1,4 +1,8 @@
 import { CreateRouteSchemeModal } from "@/components/CreateRouteScheme";
+import {
+  EditRouteSchemeModal,
+  type Scheme,
+} from "@/components/EditRouteScheme";
 import { routeService } from "@/services/route.service";
 import {
   CheckCircle2,
@@ -45,6 +49,7 @@ export default function RoutesManagement() {
   const [loading, setLoading] = useState(true);
   const [showMenu, setShowMenu] = useState<string | null>();
   const [isCreating, setIsCreating] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const loadData = async () => {
     try {
@@ -150,7 +155,9 @@ export default function RoutesManagement() {
                     {showMenu && showMenu === schema.id.toString() && (
                       <menu className="animate-in fade-in zoom-in-95 absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-xl">
                         <button
-                          onClick={() => {}}
+                          onClick={() => {
+                            setIsEditing(true);
+                          }}
                           className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50"
                         >
                           <Edit2 size={16} /> Editar Datos
@@ -233,8 +240,24 @@ export default function RoutesManagement() {
         <CreateRouteSchemeModal
           onClose={() => {
             setIsCreating(false);
+            setShowMenu(null);
           }}
           onSuccess={() => {}}
+        />
+      )}
+
+      {isEditing && (
+        <EditRouteSchemeModal
+          onClose={() => {
+            setIsEditing(false);
+            setShowMenu(null);
+          }}
+          onSuccess={() => {}}
+          scheme={
+            schemas.filter(
+              (s) => s.id.toString() === showMenu,
+            )[0] as unknown as Scheme
+          }
         />
       )}
 
