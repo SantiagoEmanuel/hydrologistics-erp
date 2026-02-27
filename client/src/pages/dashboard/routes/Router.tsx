@@ -101,7 +101,7 @@ export default function RoutesPage() {
 
         <button
           onClick={() => setIsCreating(true)}
-          className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 font-bold text-white shadow-sm transition-all hover:bg-blue-700 active:scale-95 max-md:w-full max-md:justify-center"
+          className="flex w-50 items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 font-bold text-white shadow-sm transition-all hover:bg-blue-700 active:scale-95 max-md:w-full max-md:justify-center"
         >
           <Plus size={20} /> Nueva Salida
         </button>
