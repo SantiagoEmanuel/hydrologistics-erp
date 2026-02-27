@@ -622,8 +622,8 @@ routesRouter.post("/settle/preview", async (req, res) => {
           basePrice * cashUnits - (productTotalDebt + volumeAdjustment);
       }
 
-      if (qtyCompensated > 0) {
-        const FIXED_DRIVER_PROFIT = tiers.length === 1 ? 1100 : 410;
+      if (qtyCompensated > 0 && tiers[0].schemeId !== 2) {
+        const FIXED_DRIVER_PROFIT = 410;
         voucherCompensation = qtyCompensated * FIXED_DRIVER_PROFIT;
 
         productTotalDebt -= voucherCompensation;
