@@ -77,7 +77,7 @@ export interface SettlementPreview {
 }
 
 interface NewSchema {
-  id: string;
+  id?: number;
   name: string;
   isActive: boolean;
   tiers: {

@@ -77,6 +77,7 @@ export function CreateRouteSchemeModal({ onClose, onSuccess }: Props) {
         name,
         isActive,
         tiers: tiers.map((t) => ({
+          id: t.id,
           productId: Number(t.productId),
           minVolume: Number(t.minVolume),
           maxVolume: t.maxVolume === "" ? null : Number(t.maxVolume),
