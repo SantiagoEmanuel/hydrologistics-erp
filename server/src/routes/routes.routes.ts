@@ -1,4 +1,15 @@
-import { and, asc, count, eq, gte, isNull, lte, ne, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  gte,
+  isNull,
+  lte,
+  ne,
+  notInArray,
+  sql,
+} from "drizzle-orm";
 import { Router } from "express";
 import { db } from "../db";
 import {
@@ -6,6 +17,7 @@ import {
   cashShifts,
   products,
   routeItems,
+  routePricingSchemes,
   routePricingTiers,
   routes,
   saleItems,
@@ -37,6 +49,7 @@ routesRouter.get("/", async (req, res) => {
 routesRouter.get("/schemas", async (req, res) => {
   try {
     const routesSchemas = await db.query.routePricingSchemes.findMany({
+      where: eq(routePricingSchemes.isActive, true),
       with: {
         tiers: {
           with: {
@@ -48,6 +61,123 @@ routesRouter.get("/schemas", async (req, res) => {
     res.json(routesSchemas);
   } catch (error) {
     res.status(500).json({ error: "Error al obtener el esquema de rutas" });
+  }
+});
+
+routesRouter.post("/schema", async (req, res) => {
+  const { name, isActive, tiers } = req.body;
+
+  if (!name || tiers.length === 0) {
+    return res.status(400).json({
+      error: "Verifica que los datos del esquema sean válidos",
+    });
+  }
+
+  try {
+    const result = await db.transaction(async (tx) => {
+      const [newScheme] = await tx
+        .insert(routePricingSchemes)
+        .values({
+          name,
+          isActive,
+        })
+        .returning();
+
+      if (!newScheme) {
+        throw new Error("No se ha encontrado un esquema con esa ID");
+      }
+
+      const tiersToInsert = tiers.map((tier: any) => ({
+        schemeId: newScheme.id,
+        productId: tier.productId,
+        minVolume: tier.minVolume,
+        maxVolume: tier.maxVolume || null,
+        renderPrice: tier.renderPrice,
+      }));
+
+      const newTiers = await tx
+        .insert(routePricingTiers)
+        .values(tiersToInsert)
+        .returning();
+
+      return {
+        ...newScheme,
+        tiers: newTiers,
+      };
+    });
+
+    if (!result) {
+      return res
+        .status(500)
+        .json({ error: "Error al guardar el nuevo Esquema" });
+    }
+
+    return res.status(201).json(result);
+  } catch {
+    return res.status(500).json({
+      error:
+        "Ha ocurrido un problema al guardar el Esquema, inténtalo más tarde",
+    });
+  }
+});
+
+routesRouter.put("/schemas/:id", async (req, res) => {
+  const schemeId = Number(req.params.id);
+  const { name, isActive, tiers } = req.body;
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx
+        .update(routePricingSchemes)
+        .set({ name, isActive })
+        .where(eq(routePricingSchemes.id, schemeId));
+
+      const incomingTierIds = tiers
+        .map((t: any) => t.id)
+        .filter((id: any) => typeof id === "number");
+
+      if (incomingTierIds.length > 0) {
+        await tx
+          .delete(routePricingTiers)
+          .where(
+            and(
+              eq(routePricingTiers.schemeId, schemeId),
+              notInArray(routePricingTiers.id, incomingTierIds),
+            ),
+          );
+      } else {
+        await tx
+          .delete(routePricingTiers)
+          .where(eq(routePricingTiers.schemeId, schemeId));
+      }
+
+      for (const tier of tiers) {
+        if (typeof tier.id === "number") {
+          await tx
+            .update(routePricingTiers)
+            .set({
+              productId: tier.productId,
+              minVolume: tier.minVolume,
+              maxVolume: tier.maxVolume,
+              renderPrice: tier.renderPrice,
+            })
+            .where(eq(routePricingTiers.id, tier.id));
+        } else {
+          await tx.insert(routePricingTiers).values({
+            schemeId: schemeId,
+            productId: tier.productId,
+            minVolume: tier.minVolume,
+            maxVolume: tier.maxVolume,
+            renderPrice: tier.renderPrice,
+          });
+        }
+      }
+    });
+
+    res.json({ success: true, message: "Esquema actualizado correctamente" });
+  } catch (error: any) {
+    console.error("Error actualizando esquema:", error);
+    res.status(500).json({ error: "Error interno al actualizar el esquema" });
   }
 });
 
@@ -493,7 +623,7 @@ routesRouter.post("/settle/preview", async (req, res) => {
       }
 
       if (qtyCompensated > 0) {
-        const FIXED_DRIVER_PROFIT = 410;
+        const FIXED_DRIVER_PROFIT = tiers.length === 1 ? 1100 : 410;
         voucherCompensation = qtyCompensated * FIXED_DRIVER_PROFIT;
 
         productTotalDebt -= voucherCompensation;
