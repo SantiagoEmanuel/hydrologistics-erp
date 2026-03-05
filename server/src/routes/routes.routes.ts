@@ -637,8 +637,7 @@ routesRouter.post("/settle/preview", async (req, res) => {
       }
 
       if (qtyCompensated > 0 && routeScheme.haveDiscount) {
-        const FIXED_DRIVER_PROFIT = 410;
-        voucherCompensation = qtyCompensated * FIXED_DRIVER_PROFIT;
+        voucherCompensation = qtyCompensated * routeScheme.discount!;
 
         productTotalDebt -= voucherCompensation;
       }
