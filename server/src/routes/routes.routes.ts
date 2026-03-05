@@ -460,7 +460,9 @@ routesRouter.post("/settle/preview", async (req, res) => {
   let { driverName, date, breakdown } = req.body;
 
   if (!driverName || !date) {
-    return res.status(400).json({ error: "Faltan datos (driverName, date)" });
+    return res
+      .status(400)
+      .json({ error: "Faltan datos (Nombre de conductor, Fecha)" });
   }
 
   driverName = normalizeString(driverName);
@@ -483,9 +485,9 @@ routesRouter.post("/settle/preview", async (req, res) => {
     });
 
     if (pendingRoutes.length === 0) {
-      return res
-        .status(404)
-        .json({ error: `No hay registros de ${driverName} para el ${date}` });
+      return res.status(404).json({
+        error: `No hay registros de ${driverName} para la fecha ${date}`,
+      });
     }
 
     const firstRoute = pendingRoutes[0];
@@ -546,13 +548,25 @@ routesRouter.post("/settle/preview", async (req, res) => {
 
       const totalValidSales = Math.max(0, data.totalSold - qtyExchange);
 
-      const tiers = await db.query.routePricingTiers.findMany({
-        where: and(
-          eq(routePricingTiers.schemeId, pricingSchemeId),
-          eq(routePricingTiers.productId, productId),
-        ),
-        orderBy: [asc(routePricingTiers.minVolume)],
+      const routeScheme = await db.query.routePricingSchemes.findFirst({
+        where: eq(routePricingSchemes.id, pricingSchemeId),
+        with: {
+          tiers: {
+            where: eq(routePricingTiers.productId, productId),
+            orderBy: [asc(routePricingTiers.minVolume)],
+          },
+        },
       });
+
+      console.log({ routeScheme });
+
+      if (!routeScheme) {
+        return res.status(404).json({
+          error: "No se encontró el esquema del conductor",
+        });
+      }
+
+      const tiers = routeScheme.tiers;
 
       let productTotalDebt = 0;
       let bonusesApplied = 0;
@@ -622,7 +636,7 @@ routesRouter.post("/settle/preview", async (req, res) => {
           basePrice * cashUnits - (productTotalDebt + volumeAdjustment);
       }
 
-      if (qtyCompensated > 0 && tiers[0].schemeId !== 2) {
+      if (qtyCompensated > 0 && routeScheme.haveDiscount) {
         const FIXED_DRIVER_PROFIT = 410;
         voucherCompensation = qtyCompensated * FIXED_DRIVER_PROFIT;
 
