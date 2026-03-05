@@ -45,6 +45,7 @@ export const routePricingSchemes = sqliteTable("route_pricing_schemes", {
   name: text("name").notNull(),
   isActive: integer("is_active", { mode: "boolean" }).default(true),
   haveDiscount: integer("have_discount", { mode: "boolean" }).default(true),
+  discount: integer("discount", { mode: "number" }).default(0),
 });
 
 export const routePricingTiers = sqliteTable("route_pricing_tiers", {
