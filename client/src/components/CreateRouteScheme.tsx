@@ -23,6 +23,8 @@ export function CreateRouteSchemeModal({ onClose, onSuccess }: Props) {
 
   const [name, setName] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [haveDiscount, setHaveDiscount] = useState(false);
+  const [discount, setDiscount] = useState(0);
   const [tiers, setTiers] = useState<TierLocal[]>([]);
 
   const handleAddTier = () => {
@@ -76,6 +78,8 @@ export function CreateRouteSchemeModal({ onClose, onSuccess }: Props) {
       const payload = {
         name,
         isActive,
+        haveDiscount,
+        discount,
         tiers: tiers.map((t) => ({
           id: t.id,
           productId: Number(t.productId),
@@ -142,6 +146,45 @@ export function CreateRouteSchemeModal({ onClose, onSuccess }: Props) {
                 <div className="peer h-7 w-14 rounded-full bg-gray-200 peer-checked:bg-green-500 peer-focus:ring-4 peer-focus:ring-green-300 peer-focus:outline-none after:absolute after:top-0.5 after:left-0.5 after:h-6 after:w-6 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
                 <span className="ml-3 text-sm font-bold text-gray-700 uppercase">
                   {isActive ? "Activo" : "Inactivo"}
+                </span>
+              </label>
+            </div>
+          </div>
+          <div className="flex flex-col gap-6 sm:flex-row">
+            <div className="flex-1">
+              <label className="mb-1.5 block text-sm font-bold tracking-wide text-gray-700 uppercase">
+                Descuento aplicable al esquema
+              </label>
+              <input
+                disabled={!haveDiscount}
+                type="number"
+                name="discount"
+                className="w-full rounded-xl border border-gray-300 p-3 transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                value={discount}
+                onChange={(e) => {
+                  if (e.target.value.split("")[0] === "0") {
+                    const arr = e.target.value.split("");
+                    arr.shift();
+                    setDiscount(Number(arr.toString().replaceAll(",", "")));
+                    return;
+                  } else {
+                    setDiscount(Number(e.target.value));
+                    return;
+                  }
+                }}
+              />
+            </div>
+            <div className="flex items-center gap-3 pt-6">
+              <label className="relative inline-flex cursor-pointer items-center">
+                <input
+                  type="checkbox"
+                  className="peer sr-only"
+                  checked={haveDiscount}
+                  onChange={(e) => setHaveDiscount(e.target.checked)}
+                />
+                <div className="peer h-7 w-14 rounded-full bg-gray-200 peer-checked:bg-green-500 peer-focus:ring-4 peer-focus:ring-green-300 peer-focus:outline-none after:absolute after:top-0.5 after:left-0.5 after:h-6 after:w-6 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
+                <span className="ml-3 text-sm font-bold text-gray-700 uppercase">
+                  {haveDiscount ? "Con descuento" : "Sin descuento"}
                 </span>
               </label>
             </div>
