@@ -21,6 +21,8 @@ export interface RenderSchema {
   id: number;
   name: string;
   isActive: boolean | null;
+  haveDiscount: boolean;
+  discount: number;
   tiers: {
     id: number;
     schemeId: number;
