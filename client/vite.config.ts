@@ -15,7 +15,7 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MiB
       },
       manifest: {
-        name: "Hydrologistics ERP - Agua Santa Ángela",
+        name: "Hydrologistics ERP - Sistema de gestión",
         short_name: "HydroLogistics",
         description: "Sistema de gestión logística y reparto.",
         theme_color: "#2563EB",
