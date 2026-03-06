@@ -65,7 +65,7 @@ routesRouter.get("/schemas", async (req, res) => {
 });
 
 routesRouter.post("/schema", async (req, res) => {
-  const { name, isActive, tiers } = req.body;
+  const { name, isActive, haveDiscount, discount, tiers } = req.body;
 
   if (!name || tiers.length === 0) {
     return res.status(400).json({
@@ -80,6 +80,8 @@ routesRouter.post("/schema", async (req, res) => {
         .values({
           name,
           isActive,
+          haveDiscount,
+          discount,
         })
         .returning();
 
@@ -123,13 +125,13 @@ routesRouter.post("/schema", async (req, res) => {
 
 routesRouter.put("/schemas/:id", async (req, res) => {
   const schemeId = Number(req.params.id);
-  const { name, isActive, tiers } = req.body;
+  const { name, isActive, haveDiscount, discount, tiers } = req.body;
 
   try {
     await db.transaction(async (tx) => {
       await tx
         .update(routePricingSchemes)
-        .set({ name, isActive })
+        .set({ name, isActive, haveDiscount, discount })
         .where(eq(routePricingSchemes.id, schemeId));
 
       const incomingTierIds = tiers
@@ -557,8 +559,6 @@ routesRouter.post("/settle/preview", async (req, res) => {
           },
         },
       });
-
-      console.log({ routeScheme });
 
       if (!routeScheme) {
         return res.status(404).json({
