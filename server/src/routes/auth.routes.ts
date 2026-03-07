@@ -36,7 +36,7 @@ authRouter.post("/login", async (req, res) => {
     res.cookie("auth_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV !== "production" ? "lax" : "none",
+      sameSite: process.env.NODE_ENV !== "production" ? "lax" : "lax",
       maxAge: 12 * 60 * 60 * 1000,
     });
 
@@ -88,7 +88,7 @@ authRouter.post("/register", authenticateToken, async (req, res) => {
     res.cookie("auth_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV !== "production" ? "lax" : "none",
+      sameSite: process.env.NODE_ENV !== "production" ? "lax" : "lax",
       maxAge: 12 * 60 * 60 * 1000,
     });
 
