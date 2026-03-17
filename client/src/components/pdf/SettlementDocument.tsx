@@ -1,190 +1,161 @@
-import type { SettlementPreview } from "@/services/route.service";
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { DateTime } from "luxon";
+
+interface SchemeBreakdownItem {
+  productId: number;
+  productName: string;
+  totalSold: number;
+  deductions: { boleta: number; transfer: number; exchange: number };
+  cashUnits: number;
+  basePrice: number;
+  bonuses: number;
+  voucherCompensation: number;
+  finalDebt: number;
+}
+
+interface SchemeSummary {
+  schemeId: number;
+  schemeName: string;
+  haveDiscount: boolean;
+  discountValue: number;
+  totalToPayForScheme: number;
+  items: SchemeBreakdownItem[];
+  routesIncluded: string[];
+}
+
+interface RouteDetail {
+  id: string;
+  closedAt: string;
+  items: {
+    productName: string;
+    initialLoad: number;
+    returnedLoad: number;
+    soldCount: number;
+  }[];
+}
+
+interface SettlementData {
+  driverName: string;
+  date: string;
+  globalStatus?: {
+    paymentStatus: "PAID" | "PENDING";
+    stockStatus: "CLOSED" | "OPEN";
+  };
+  totalRoutes: number;
+  totalToPay: number;
+  schemesBreakdown: SchemeSummary[];
+  routeDetails: RouteDetail[];
+}
+
+interface Props {
+  data: SettlementData;
+}
 
 const styles = StyleSheet.create({
-  page: {
-    padding: 0,
-    fontSize: 9,
-    fontFamily: "Helvetica",
-    color: "#374151",
-    backgroundColor: "#FFFFFF",
-  },
-  headerContainer: {
-    backgroundColor: "#2563EB",
-    padding: 20,
+  page: { padding: 30, fontSize: 9, fontFamily: "Helvetica", color: "#333" },
+
+  header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    marginBottom: 20,
+    borderBottomWidth: 2,
+    borderColor: "#2563EB",
+    paddingBottom: 10,
   },
-  brandTitle: {
-    color: "#FFFFFF",
-    fontSize: 22,
+  titleSection: { flexDirection: "column" },
+  title: {
+    fontSize: 18,
     fontWeight: "bold",
     textTransform: "uppercase",
-    letterSpacing: 1,
+    color: "#111",
   },
-  brandSubtitle: {
-    color: "#BFDBFE",
-    fontSize: 10,
-    marginTop: 2,
-  },
-  receiptBox: {
-    backgroundColor: "rgba(255,255,255,0.1)",
-    padding: 8,
-    borderRadius: 4,
-    alignItems: "flex-end",
-  },
-  receiptText: { color: "#FFFFFF", fontSize: 9 },
-  receiptNumber: { color: "#FFFFFF", fontSize: 12, fontWeight: "bold" },
+  subtitle: { fontSize: 10, color: "#666", marginTop: 2 },
 
-  body: { padding: 30 },
+  metaSection: { alignItems: "flex-end" },
+  metaText: { fontSize: 9, marginBottom: 2 },
 
-  infoGrid: {
+  summaryContainer: {
     flexDirection: "row",
-    gap: 15,
-    marginBottom: 25,
+    gap: 10,
+    marginBottom: 20,
   },
-  infoCard: {
+  summaryBox: {
     flex: 1,
-    backgroundColor: "#F3F4F6",
-    padding: 10,
-    borderRadius: 6,
-    borderLeftWidth: 4,
-    borderLeftColor: "#2563EB",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 4,
+    padding: 8,
+    backgroundColor: "#F9FAFB",
   },
-  infoLabel: {
+  summaryTitle: {
     fontSize: 8,
-    color: "#6B7280",
-    textTransform: "uppercase",
     fontWeight: "bold",
-    marginBottom: 4,
+    textTransform: "uppercase",
+    color: "#666",
+    marginBottom: 5,
   },
-  infoValue: {
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 2,
+  },
+  summaryLabel: { fontSize: 8, color: "#444" },
+  summaryValue: { fontSize: 8, fontWeight: "bold" },
+
+  bigTotal: {
+    fontSize: 14,
+    fontWeight: "bold",
+    textAlign: "right",
+    marginTop: 5,
+    borderTopWidth: 1,
+    borderColor: "#ccc",
+    paddingTop: 5,
+    color: "#059669",
+  },
+
+  sectionTitle: {
     fontSize: 11,
     fontWeight: "bold",
-    color: "#111827",
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-    marginTop: 10,
+    marginTop: 15,
+    marginBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-    paddingBottom: 5,
-  },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: "#111827",
+    borderColor: "#eee",
+    paddingBottom: 2,
+    color: "#2563EB",
     textTransform: "uppercase",
   },
-  sectionBadge: {
-    backgroundColor: "#E5E7EB",
-    color: "#4B5563",
-    fontSize: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 10,
-    marginLeft: 8,
-  },
-  table: {
-    width: "100%",
-    borderRadius: 6,
-    overflow: "hidden",
-    marginBottom: 15,
-  },
+
+  table: { width: "100%", marginBottom: 15 },
+
   tableHeader: {
     flexDirection: "row",
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#E5E7EB",
+    paddingVertical: 5,
+    paddingHorizontal: 4,
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-    paddingVertical: 8,
-    paddingHorizontal: 6,
+    borderColor: "#999",
+    alignItems: "center",
   },
   tableRow: {
     flexDirection: "row",
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-    paddingVertical: 6,
-    paddingHorizontal: 6,
-  },
-  colProd: { width: "30%" },
-  colNum: { width: "12%", textAlign: "center" },
-  colDed: { width: "12%", textAlign: "center", color: "#EA580C" },
-  colPrice: { width: "15%", textAlign: "right", color: "#6B7280" },
-  colTotal: { width: "19%", textAlign: "right", fontWeight: "bold" },
-
-  deductionRow: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#FED7AA",
+    borderColor: "#eee",
     paddingVertical: 4,
-    paddingHorizontal: 6,
-    backgroundColor: "#FFF7ED",
+    paddingHorizontal: 4,
+    alignItems: "center",
   },
-  colDedName: { width: "35%", fontSize: 8, color: "#9A3412" },
-  colDedItem: {
-    width: "15%",
-    textAlign: "center",
-    fontSize: 8,
-    color: "#9A3412",
-  },
-  colDedTotal: {
-    width: "20%",
-    textAlign: "right",
-    fontSize: 8,
-    fontWeight: "bold",
-    color: "#9A3412",
-  },
+  tableRowAlt: { backgroundColor: "#F9FAFB" },
 
-  totalContainer: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    marginTop: 5,
-  },
-  totalBox: {
-    backgroundColor: "#ECFDF5",
-    borderColor: "#10B981",
-    borderWidth: 1,
-    borderRadius: 6,
-    padding: 15,
-    width: 200,
-    alignItems: "flex-end",
-  },
-  totalLabel: { fontSize: 10, color: "#047857", textTransform: "uppercase" },
-  totalValue: {
-    fontSize: 20,
-    color: "#047857",
-    fontWeight: "bold",
-    marginTop: 2,
-  },
+  // Columnas Esquemas
+  colProd: { width: "30%" },
+  colNum: { width: "10%", textAlign: "center" },
+  colMoney: { width: "13%", textAlign: "right" },
+  colFinal: { width: "14%", textAlign: "right", fontWeight: "bold" },
 
-  tripContainer: {
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 6,
-  },
-  tripHeader: {
-    backgroundColor: "#F9FAFB",
-    padding: 6,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  tripTitle: { fontSize: 9, fontWeight: "bold" },
-  tripTime: { fontSize: 9, color: "#6B7280" },
-  tripRow: {
-    flexDirection: "row",
-    padding: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-  },
-
-  tripColProd: { width: "40%", fontSize: 8 },
-  tripColVal: { width: "20%", fontSize: 8, textAlign: "center" },
+  // Columnas Auditoría
+  colTripId: { width: "25%" },
+  colTripProd: { width: "30%" },
+  colTripNum: { width: "15%", textAlign: "center" },
 
   footer: {
     position: "absolute",
@@ -192,27 +163,24 @@ const styles = StyleSheet.create({
     left: 30,
     right: 30,
     textAlign: "center",
-    fontSize: 7,
-    color: "#9CA3AF",
-    paddingTop: 10,
+    fontSize: 8,
+    color: "#aaa",
     borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
+    borderColor: "#eee",
+    paddingTop: 10,
   },
   signatures: {
     flexDirection: "row",
-    justifyContent: "space-between",
     marginTop: 40,
-    marginBottom: 20,
-    paddingHorizontal: 20,
+    justifyContent: "space-around",
   },
   signLine: {
-    width: "40%",
     borderTopWidth: 1,
-    borderTopColor: "#9CA3AF",
+    borderColor: "#000",
+    width: 150,
     alignItems: "center",
     paddingTop: 5,
   },
-  signText: { fontSize: 8, color: "#6B7280", textTransform: "uppercase" },
 });
 
 const formatMoney = (val: number) =>
@@ -222,274 +190,328 @@ const formatMoney = (val: number) =>
     minimumFractionDigits: 0,
   }).format(val);
 
-interface Props {
-  data: SettlementPreview;
-  receiptNumber?: string;
-}
+const formatTime = (date: string) =>
+  DateTime.fromISO(date).toLocaleString(DateTime.TIME_SIMPLE);
 
-export default function SettlementDocument({
-  data,
-  receiptNumber = "BORRADOR",
-}: Props) {
-  const today = new Date().toLocaleDateString("es-AR");
+const formatDate = (date: string) =>
+  DateTime.fromISO(date).toFormat("dd/MM/yyyy");
 
-  const itemsWithDeductions = data.summary.filter(
-    (item) =>
-      item.deductions.boleta > 0 ||
-      item.deductions.transfer > 0 ||
-      item.deductions.exchange > 0,
-  );
+export default function SettlementDocument({ data }: Props) {
+  if (!data) return null;
+
+  const isPaid = data.globalStatus?.paymentStatus === "PAID";
+  const isStockClosed = data.globalStatus?.stockStatus === "CLOSED";
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <View style={styles.headerContainer}>
-          <View>
-            <Text style={styles.brandTitle}>HYDROLOGISTICS</Text>
-            <Text style={styles.brandSubtitle}>
-              Informe de Rendición y Cierre
+        <View style={styles.header}>
+          <View style={styles.titleSection}>
+            <Text style={styles.title}>HYDROLOGISTICS</Text>
+            <Text style={styles.subtitle}>
+              Comprobante de Rendición de Rutas
             </Text>
           </View>
-          <View style={styles.receiptBox}>
-            <Text style={styles.receiptText}>COMPROBANTE</Text>
-            <Text style={styles.receiptNumber}>#{receiptNumber}</Text>
+          <View style={styles.metaSection}>
+            <Text style={styles.metaText}>Fecha: {formatDate(data.date)}</Text>
+            <Text style={styles.metaText}>
+              Viajes Liquidados: {data.totalRoutes}
+            </Text>
+            <Text
+              style={[
+                styles.metaText,
+                { fontWeight: "bold", marginTop: 2, color: "#2563EB" },
+              ]}
+            >
+              Chofer: {data.driverName.toUpperCase()}
+            </Text>
           </View>
         </View>
 
-        <View style={styles.body}>
-          <View style={styles.infoGrid}>
-            <View style={styles.infoCard}>
-              <Text style={styles.infoLabel}>Responsable</Text>
-              <Text style={styles.infoValue}>{data.driverName}</Text>
-            </View>
-            <View style={styles.infoCard}>
-              <Text style={styles.infoLabel}>Fecha de Ruta</Text>
-              <Text style={styles.infoValue}>
-                {data.date.split("-").reverse().join("/")}
+        <View style={styles.summaryContainer}>
+          <View style={styles.summaryBox}>
+            <Text style={styles.summaryTitle}>1. Datos del Cierre</Text>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Chofer:</Text>
+              <Text style={styles.summaryValue}>
+                {data.driverName.toUpperCase()}
               </Text>
             </View>
-            <View style={styles.infoCard}>
-              <Text style={styles.infoLabel}>Fecha de Emisión</Text>
-              <Text style={styles.infoValue}>{today}</Text>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Fecha Operativa:</Text>
+              <Text style={styles.summaryValue}>{formatDate(data.date)}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Rutas Incluidas:</Text>
+              <Text style={styles.summaryValue}>{data.totalRoutes}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Esquemas Aplic.:</Text>
+              <Text style={styles.summaryValue}>
+                {data.schemesBreakdown.length}
+              </Text>
             </View>
           </View>
 
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Resumen Financiero</Text>
-            <Text style={styles.sectionBadge}>Liquidación de Caja</Text>
-          </View>
-
-          <View style={styles.table}>
-            <View style={styles.tableHeader}>
-              <Text style={styles.colProd}>PRODUCTO</Text>
-              <Text style={styles.colNum}>TOTAL</Text>
-              <Text style={styles.colDed}>DEDUC.</Text>
-              <Text style={styles.colNum}>NETO</Text>
-              <Text style={styles.colPrice}>PRECIO REF.</Text>
-              <Text style={styles.colTotal}>SUBTOTAL</Text>
-            </View>
-
-            {data.summary.map((item, idx) => {
-              const deductions =
-                (item.deductions?.boleta || 0) +
-                (item.deductions?.transfer || 0) +
-                (item.deductions?.exchange || 0);
-
-              const refPrice =
-                item.cashUnits > 0 ? item.finalDebt / item.cashUnits : 0;
-
-              return (
-                <View
-                  key={idx}
-                  style={[
-                    styles.tableRow,
-                    { backgroundColor: idx % 2 === 0 ? "#FFF" : "#F9FAFB" },
-                  ]}
-                >
-                  <Text style={styles.colProd}>{item.productName}</Text>
-                  <Text style={styles.colNum}>{item.totalSold}</Text>
-                  <Text style={styles.colDed}>
-                    {deductions > 0 ? `-${deductions}` : "-"}
-                  </Text>
-                  <Text style={[styles.colNum, { fontWeight: "bold" }]}>
-                    {item.cashUnits}
-                  </Text>
-                  <Text style={styles.colPrice}>
-                    {refPrice > 0 ? formatMoney(refPrice) : "-"}
-                  </Text>
-                  <Text style={styles.colTotal}>
-                    {formatMoney(item.finalDebt)}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
-
-          {itemsWithDeductions.length > 0 && (
-            <View style={{ marginBottom: 15 }}>
-              <View
+          <View style={styles.summaryBox}>
+            <Text style={styles.summaryTitle}>2. Estado del Sistema</Text>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Estado Financiero:</Text>
+              <Text
                 style={[
-                  styles.sectionHeader,
-                  { borderBottomWidth: 0, marginTop: 5, marginBottom: 5 },
+                  styles.summaryValue,
+                  { color: isPaid ? "#059669" : "#DC2626" },
                 ]}
               >
-                <Text
-                  style={[
-                    styles.sectionTitle,
-                    { fontSize: 10, color: "#9A3412" },
-                  ]}
-                >
-                  Desglose de Deducciones y Compensaciones
-                </Text>
-              </View>
-
-              <View
-                style={{
-                  borderRadius: 4,
-                  overflow: "hidden",
-                  borderWidth: 1,
-                  borderColor: "#FED7AA",
-                }}
-              >
-                <View
-                  style={[
-                    styles.deductionRow,
-                    {
-                      backgroundColor: "#FFEDD5",
-                      borderBottomWidth: 1,
-                      borderBottomColor: "#FDBA74",
-                    },
-                  ]}
-                >
-                  <Text style={[styles.colDedName, { fontWeight: "bold" }]}>
-                    PRODUCTO
-                  </Text>
-                  <Text style={[styles.colDedItem, { fontWeight: "bold" }]}>
-                    BOLETAS
-                  </Text>
-                  <Text style={[styles.colDedItem, { fontWeight: "bold" }]}>
-                    TRANSF.
-                  </Text>
-                  <Text style={[styles.colDedItem, { fontWeight: "bold" }]}>
-                    CAMBIOS
-                  </Text>
-                  <Text style={[styles.colDedTotal, { fontWeight: "bold" }]}>
-                    COMPENSACIÓN
-                  </Text>
-                </View>
-
-                {itemsWithDeductions.map((item, idx) => (
-                  <View key={idx} style={styles.deductionRow}>
-                    <Text style={styles.colDedName}>{item.productName}</Text>
-                    <Text style={styles.colDedItem}>
-                      {item.deductions.boleta || "-"}
-                    </Text>
-                    <Text style={styles.colDedItem}>
-                      {item.deductions.transfer || "-"}
-                    </Text>
-                    <Text style={styles.colDedItem}>
-                      {item.deductions.exchange || "-"}
-                    </Text>
-                    <Text style={styles.colDedTotal}>
-                      {item.voucherCompensation > 0
-                        ? formatMoney(item.voucherCompensation)
-                        : "-"}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-          {itemsWithDeductions.length > 0 && (
-            <View
-              style={{
-                marginTop: 0,
-                marginBottom: 5,
-                padding: 8,
-                backgroundColor: "#F3F4F6",
-                borderRadius: 4,
-              }}
-            >
-              <Text
-                style={{ fontSize: 7, color: "#6B7280", fontStyle: "italic" }}
-              >
-                * Las Boletas y Transferencias descuentan efectivo a rendir y
-                generan una compensación de $410/u a favor del chofer. Los
-                Cambios por rotura solo descuentan del total vendido.
+                {isPaid ? "PAGADO (CAJA)" : "PENDIENTE"}
               </Text>
             </View>
-          )}
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Estado de Stock:</Text>
+              <Text
+                style={[
+                  styles.summaryValue,
+                  { color: isStockClosed ? "#059669" : "#DC2626" },
+                ]}
+              >
+                {isStockClosed ? "CERRADO" : "PENDIENTE"}
+              </Text>
+            </View>
+          </View>
 
-          <View style={styles.totalContainer}>
-            <View style={styles.totalBox}>
-              <Text style={styles.totalLabel}>Total Efectivo a Rendir</Text>
-              <Text style={styles.totalValue}>
+          <View style={styles.summaryBox}>
+            <Text style={styles.summaryTitle}>3. Total a Rendir</Text>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Efectivo Neto:</Text>
+              <Text style={styles.summaryValue}>
                 {formatMoney(data.totalToPay)}
               </Text>
             </View>
-          </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Deducciones:</Text>
+              <Text style={styles.summaryValue}>Aplicadas por producto</Text>
+            </View>
 
-          <View style={[styles.sectionHeader, { marginTop: 20 }]}>
-            <Text style={styles.sectionTitle}>Detalle de Movimientos</Text>
-            <Text style={styles.sectionBadge}>
-              {data.routesIncluded} Viajes Registrados
+            <Text style={styles.bigTotal}>{formatMoney(data.totalToPay)}</Text>
+            <Text style={{ fontSize: 7, textAlign: "right", color: "#666" }}>
+              Total Físico Requerido
             </Text>
-          </View>
-
-          {data.routeDetails &&
-            data.routeDetails.map((route, idx) => (
-              <View key={idx} style={styles.tripContainer}>
-                <View style={styles.tripHeader}>
-                  <Text style={styles.tripTitle}>VIAJE #{idx + 1}</Text>
-                  <Text style={styles.tripTime}>
-                    Hora Cierre:{" "}
-                    {new Date(route.closedAt).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                    hs
-                  </Text>
-                </View>
-
-                <View style={[styles.tripRow, { backgroundColor: "#F3F4F6" }]}>
-                  <Text style={styles.tripColProd}>PRODUCTO</Text>
-                  <Text style={styles.tripColVal}>CARGA</Text>
-                  <Text style={styles.tripColVal}>VOLVIÓ</Text>
-                  <Text style={[styles.tripColVal, { fontWeight: "bold" }]}>
-                    VENTA
-                  </Text>
-                </View>
-
-                {route.items.map((item, i) => (
-                  <View key={i} style={styles.tripRow}>
-                    <Text style={styles.tripColProd}>{item.productName}</Text>
-                    <Text style={styles.tripColVal}>{item.initialLoad}</Text>
-                    <Text style={styles.tripColVal}>{item.returnedLoad}</Text>
-                    <Text style={[styles.tripColVal, { fontWeight: "bold" }]}>
-                      {item.soldCount}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            ))}
-
-          <View style={styles.signatures}>
-            <View style={styles.signLine}>
-              <Text style={styles.signText}>Firma Responsable (Admin)</Text>
-            </View>
-            <View style={styles.signLine}>
-              <Text style={styles.signText}>Firma Conforme (Chofer)</Text>
-            </View>
           </View>
         </View>
 
-        <View style={styles.footer}>
+        {data.schemesBreakdown.map((scheme, sIdx) => (
+          <View key={sIdx} wrap={false}>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "flex-end",
+              }}
+            >
+              <Text style={styles.sectionTitle}>
+                Esquema: {scheme.schemeName}{" "}
+                {scheme.haveDiscount ? "(CON DESCUENTO)" : ""}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 10,
+                  fontWeight: "bold",
+                  marginBottom: 8,
+                  color: "#111",
+                }}
+              >
+                Subtotal: {formatMoney(scheme.totalToPayForScheme)}
+              </Text>
+            </View>
+
+            <View style={styles.table}>
+              <View style={styles.tableHeader}>
+                <Text style={[styles.colProd, { fontWeight: "bold" }]}>
+                  Producto
+                </Text>
+                <Text style={[styles.colNum, { fontWeight: "bold" }]}>
+                  Total
+                </Text>
+                <Text
+                  style={[
+                    styles.colNum,
+                    { fontWeight: "bold", color: "#DC2626" },
+                  ]}
+                >
+                  Deduc.
+                </Text>
+                <Text style={[styles.colNum, { fontWeight: "bold" }]}>
+                  Cash
+                </Text>
+                <Text
+                  style={[
+                    styles.colMoney,
+                    { fontWeight: "bold", color: "#2563EB" },
+                  ]}
+                >
+                  Bonif.
+                </Text>
+                <Text
+                  style={[
+                    styles.colMoney,
+                    { fontWeight: "bold", color: "#9333EA" },
+                  ]}
+                >
+                  Compens.
+                </Text>
+                <Text style={[styles.colFinal, { fontWeight: "bold" }]}>
+                  Subtotal
+                </Text>
+              </View>
+
+              {scheme.items.map((item, iIdx) => {
+                const totalDeductions =
+                  item.deductions.boleta +
+                  item.deductions.transfer +
+                  item.deductions.exchange;
+                return (
+                  <View
+                    key={iIdx}
+                    style={[
+                      styles.tableRow,
+                      iIdx % 2 !== 0 ? styles.tableRowAlt : {},
+                    ]}
+                  >
+                    <View style={styles.colProd}>
+                      <Text style={{ fontWeight: "bold" }}>
+                        {item.productName}
+                      </Text>
+                      <Text style={{ fontSize: 7, color: "#666" }}>
+                        Base: {formatMoney(item.basePrice)}
+                      </Text>
+                    </View>
+                    <Text style={styles.colNum}>{item.totalSold}</Text>
+                    <Text
+                      style={[
+                        styles.colNum,
+                        { color: "#DC2626", fontWeight: "bold" },
+                      ]}
+                    >
+                      {totalDeductions > 0 ? `-${totalDeductions}` : "-"}
+                    </Text>
+                    <Text style={[styles.colNum, { fontWeight: "bold" }]}>
+                      {item.cashUnits}
+                    </Text>
+                    <Text style={[styles.colMoney, { color: "#2563EB" }]}>
+                      {item.bonuses > 0 ? `-${formatMoney(item.bonuses)}` : "-"}
+                    </Text>
+                    <Text style={[styles.colMoney, { color: "#9333EA" }]}>
+                      {item.voucherCompensation > 0
+                        ? `-${formatMoney(item.voucherCompensation)}`
+                        : "-"}
+                    </Text>
+                    <Text style={styles.colFinal}>
+                      {formatMoney(item.finalDebt)}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        ))}
+
+        {data.routeDetails && data.routeDetails.length > 0 && (
+          <View wrap={false} style={{ marginTop: 10 }}>
+            <Text style={styles.sectionTitle}>
+              Detalle y Auditoría de Viajes
+            </Text>
+
+            <View style={styles.table}>
+              <View style={styles.tableHeader}>
+                <Text style={[styles.colTripId, { fontWeight: "bold" }]}>
+                  Viaje / Cierre
+                </Text>
+                <Text style={[styles.colTripProd, { fontWeight: "bold" }]}>
+                  Producto
+                </Text>
+                <Text style={[styles.colTripNum, { fontWeight: "bold" }]}>
+                  Cargó
+                </Text>
+                <Text style={[styles.colTripNum, { fontWeight: "bold" }]}>
+                  Devolvió
+                </Text>
+                <Text
+                  style={[
+                    styles.colTripNum,
+                    { fontWeight: "bold", color: "#059669" },
+                  ]}
+                >
+                  Vendió
+                </Text>
+              </View>
+
+              {data.routeDetails.map((route, rIdx) => (
+                <View
+                  key={rIdx}
+                  style={{
+                    borderBottomWidth: 1,
+                    borderColor: "#ccc",
+                    paddingBottom: 5,
+                    marginBottom: 5,
+                  }}
+                >
+                  {route.items.map((item, iIdx) => (
+                    <View
+                      key={iIdx}
+                      style={[
+                        styles.tableRow,
+                        iIdx % 2 !== 0 ? styles.tableRowAlt : {},
+                        { borderBottomWidth: 0 },
+                      ]}
+                    >
+                      <View style={styles.colTripId}>
+                        {iIdx === 0 ? (
+                          <>
+                            <Text style={{ fontWeight: "bold", fontSize: 8 }}>
+                              ID: {route.id.split("-")[0]}
+                            </Text>
+                            <Text style={{ fontSize: 7, color: "#666" }}>
+                              {formatTime(route.closedAt)}
+                            </Text>
+                          </>
+                        ) : null}
+                      </View>
+                      <Text
+                        style={[styles.colTripProd, { fontWeight: "bold" }]}
+                      >
+                        {item.productName}
+                      </Text>
+                      <Text style={styles.colTripNum}>{item.initialLoad}</Text>
+                      <Text style={styles.colTripNum}>{item.returnedLoad}</Text>
+                      <Text
+                        style={[
+                          styles.colTripNum,
+                          { fontWeight: "bold", color: "#059669" },
+                        ]}
+                      >
+                        {item.soldCount}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        <View style={styles.signatures} wrap={false}>
+          <View style={styles.signLine}>
+            <Text>Firma Chofer ({data.driverName})</Text>
+          </View>
+          <View style={styles.signLine}>
+            <Text>Firma Supervisor/Auditor</Text>
+          </View>
+        </View>
+
+        <View style={styles.footer} fixed>
           <Text>
-            Sistema HydroLogistics - Documento oficial de control interno.
-          </Text>
-          <Text>
-            Este documento respalda el ingreso de efectivo y el movimiento de
-            stock detallado.
+            Reporte válido como comprobante de rendición generado el {DateTime.now().toFormat("dd/MM/yyyy HH:mm")} hs
+            - Hydrologistics System
           </Text>
         </View>
       </Page>
