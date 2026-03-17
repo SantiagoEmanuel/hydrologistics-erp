@@ -4,9 +4,9 @@ import {
   count,
   eq,
   gte,
+  inArray,
   isNull,
   lte,
-  ne,
   notInArray,
   sql,
 } from "drizzle-orm";
@@ -464,7 +464,7 @@ routesRouter.post("/settle/preview", async (req, res) => {
   if (!driverName || !date) {
     return res
       .status(400)
-      .json({ error: "Faltan datos (Nombre de conductor, Fecha)" });
+      .json({ error: "Faltan datos obligatorios (Conductor, Fecha)" });
   }
 
   driverName = normalizeString(driverName);
@@ -476,9 +476,6 @@ routesRouter.post("/settle/preview", async (req, res) => {
     const pendingRoutes = await db.query.routes.findMany({
       where: and(
         eq(routes.driverName, driverName),
-        eq(routes.stockStatus, "CLOSED"),
-
-        ne(routes.paymentStatus, "PAID"),
         gte(routes.date, startDate),
         lte(routes.date, endDate),
       ),
@@ -492,182 +489,221 @@ routesRouter.post("/settle/preview", async (req, res) => {
       });
     }
 
-    const firstRoute = pendingRoutes[0];
+    const paymentStatus = pendingRoutes.every((r) => r.paymentStatus === "PAID")
+      ? "PAID"
+      : "PENDING";
+    const stockStatus = pendingRoutes.every((r) => r.stockStatus === "CLOSED")
+      ? "CLOSED"
+      : "OPEN";
 
-    const breakdownMap: Record<number, Record<string, number>> = {};
-    if (breakdown && Array.isArray(breakdown)) {
-      breakdown.forEach((item: any) => {
-        if (!breakdownMap[item.productId]) breakdownMap[item.productId] = {};
-        breakdownMap[item.productId][item.type] =
-          (breakdownMap[item.productId][item.type] || 0) +
-          Number(item.quantity);
-      });
-    }
-
-    const summaryByProduct: Record<
-      number,
-      { name: string; totalSold: number; streetPrice: number }
-    > = {};
+    const routesByScheme: Record<number, typeof pendingRoutes> = {};
+    const schemeIds = new Set<number>();
 
     for (const route of pendingRoutes) {
-      for (const item of route.items) {
-        const pId = item.productId;
-        if (!summaryByProduct[pId]) {
-          summaryByProduct[pId] = {
-            name: item.product.name,
-            totalSold: 0,
-            streetPrice: item.streetPriceSnapshot || 0,
-          };
-        }
+      const sId = route.pricingSchemeId || 0;
+      if (!routesByScheme[sId]) routesByScheme[sId] = [];
+      routesByScheme[sId].push(route);
+      if (sId !== 0) schemeIds.add(sId);
+    }
 
-        const realSold = Math.max(
-          0,
-          item.initialLoad - (item.returnedLoad || 0),
-        );
+    const schemesData = await db.query.routePricingSchemes.findMany({
+      where: inArray(
+        routePricingSchemes.id,
+        Array.from(schemeIds).length > 0 ? Array.from(schemeIds) : [0],
+      ),
+      with: { tiers: { orderBy: [asc(routePricingTiers.minVolume)] } },
+    });
+    const schemesMap = new Map(schemesData.map((s) => [s.id, s]));
 
-        summaryByProduct[pId].totalSold += realSold;
+    const deductionPool: Record<
+      number,
+      Record<number, { BOLETA: number; TRANSFER: number; EXCHANGE: number }>
+    > = {};
+
+    if (breakdown && Array.isArray(breakdown)) {
+      for (const item of breakdown) {
+        const pId = Number(item.productId);
+        const sId = Number(item.schemeId);
+
+        if (!deductionPool[sId]) deductionPool[sId] = {};
+        if (!deductionPool[sId][pId])
+          deductionPool[sId][pId] = { BOLETA: 0, TRANSFER: 0, EXCHANGE: 0 };
+
+        const type = item.type as "BOLETA" | "TRANSFER" | "EXCHANGE";
+        deductionPool[sId][pId][type] += Number(item.quantity);
       }
     }
 
-    const pricingSchemeId = firstRoute.pricingSchemeId || 1;
     let grandTotalCashRequired = 0;
-    const itemsBreakdown = [];
+    const schemesSummary = [];
 
-    for (const [productIdStr, data] of Object.entries(summaryByProduct)) {
-      const productId = Number(productIdStr);
+    for (const [schemeIdStr, routesInScheme] of Object.entries(
+      routesByScheme,
+    )) {
+      const schemeId = Number(schemeIdStr);
+      const schemeDef = schemesMap.get(schemeId);
 
-      const deductions = breakdownMap[productId] || {};
-      const qtyBoleta = deductions["BOLETA"] || 0;
-      const qtyTransfer = deductions["TRANSFER"] || 0;
-      const qtyExchange = deductions["EXCHANGE"] || 0;
+      const tiers = schemeDef?.tiers || [];
+      const haveDiscount = schemeDef?.haveDiscount || false;
+      const discountValue = schemeDef?.discount || 0;
 
-      const qtyCompensated = qtyBoleta + qtyTransfer;
-
-      const cashUnits = Math.max(
-        0,
-        data.totalSold - qtyExchange - qtyCompensated,
-      );
-
-      const totalValidSales = Math.max(0, data.totalSold - qtyExchange);
-
-      const routeScheme = await db.query.routePricingSchemes.findFirst({
-        where: eq(routePricingSchemes.id, pricingSchemeId),
-        with: {
-          tiers: {
-            where: eq(routePricingTiers.productId, productId),
-            orderBy: [asc(routePricingTiers.minVolume)],
-          },
-        },
-      });
-
-      if (!routeScheme) {
-        return res.status(404).json({
-          error: "No se encontró el esquema del conductor",
-        });
+      const summaryByProduct: Record<
+        number,
+        { name: string; totalSold: number; streetPrice: number }
+      > = {};
+      for (const route of routesInScheme) {
+        for (const item of route.items) {
+          const pId = item.productId;
+          if (!summaryByProduct[pId]) {
+            summaryByProduct[pId] = {
+              name: item.product.name,
+              totalSold: 0,
+              streetPrice: item.streetPriceSnapshot || 0,
+            };
+          }
+          summaryByProduct[pId].totalSold += Math.max(
+            0,
+            item.initialLoad - (item.returnedLoad || 0),
+          );
+        }
       }
 
-      const tiers = routeScheme.tiers;
+      let schemeTotalDebt = 0;
+      const itemsBreakdown = [];
 
-      let productTotalDebt = 0;
-      let bonusesApplied = 0;
-      let voucherCompensation = 0;
-      let basePrice = 0;
+      for (const [productIdStr, data] of Object.entries(summaryByProduct)) {
+        const productId = Number(productIdStr);
 
-      if (tiers.length === 0) {
-        const prod = await db.query.products.findFirst({
-          where: eq(products.id, productId),
-        });
-        basePrice = prod?.wholesalePrice || prod?.price || 0;
-        productTotalDebt = cashUnits * basePrice;
-      } else {
-        basePrice = tiers[0].renderPrice;
-        let unitsToPrice = cashUnits;
+        const pool = deductionPool[schemeId]?.[productId] || {
+          BOLETA: 0,
+          TRANSFER: 0,
+          EXCHANGE: 0,
+        };
 
-        for (let i = 0; i < tiers.length; i++) {
-          const currentTier = tiers[i];
-          const nextTier = tiers[i + 1];
-          let tierCapacity = Infinity;
-          if (nextTier) {
-            tierCapacity = nextTier.minVolume - currentTier.minVolume;
-          }
-          const unitsInThisTier = Math.min(unitsToPrice, tierCapacity);
+        const qtyBoleta = Math.min(pool.BOLETA, data.totalSold);
+        const qtyTransfer = Math.min(pool.TRANSFER, data.totalSold - qtyBoleta);
+        const qtyExchange = Math.min(
+          pool.EXCHANGE,
+          data.totalSold - qtyBoleta - qtyTransfer,
+        );
 
-          if (unitsInThisTier > 0) {
-            productTotalDebt += unitsInThisTier * currentTier.renderPrice;
-            unitsToPrice -= unitsInThisTier;
-          }
-          if (unitsToPrice <= 0) break;
-        }
+        const qtyCompensated = qtyBoleta + qtyTransfer;
+        const cashUnits = Math.max(
+          0,
+          data.totalSold - qtyExchange - qtyCompensated,
+        );
+        const totalValidSales = Math.max(0, data.totalSold - qtyExchange);
 
-        let volumeAdjustment = 0;
+        const productTiers = tiers.filter((t) => t.productId === productId);
 
-        if (qtyCompensated > 0) {
-          let remainingItems = qtyCompensated;
-          let currentVolumeLevel = totalValidSales;
+        let productTotalDebt = 0;
+        let bonusesApplied = 0;
+        let voucherCompensation = 0;
+        let basePrice = 0;
 
-          const reversedTiers = tiers
-            .slice()
-            .sort((a, b) => b.minVolume - a.minVolume);
+        if (productTiers.length === 0) {
+          const prod = await db.query.products.findFirst({
+            where: eq(products.id, productId),
+          });
+          basePrice = prod?.wholesalePrice || prod?.price || 0;
+          productTotalDebt = cashUnits * basePrice;
+        } else {
+          basePrice = productTiers[0].renderPrice;
+          let unitsToPrice = cashUnits;
 
-          for (const tier of reversedTiers) {
-            if (remainingItems <= 0) break;
-            if (currentVolumeLevel < tier.minVolume) continue;
+          for (let i = 0; i < productTiers.length; i++) {
+            const currentTier = productTiers[i];
+            const nextTier = productTiers[i + 1];
+            const tierCapacity = nextTier
+              ? nextTier.minVolume - currentTier.minVolume
+              : Infinity;
 
-            const unitsInThisTierSpace =
-              currentVolumeLevel - tier.minVolume + 1;
+            const unitsInThisTier = Math.min(unitsToPrice, tierCapacity);
 
-            const unitsToApply = Math.min(remainingItems, unitsInThisTierSpace);
-
-            const spread = basePrice - tier.renderPrice;
-
-            if (unitsToApply > 0 && spread > 0) {
-              volumeAdjustment += unitsToApply * spread;
+            if (unitsInThisTier > 0) {
+              productTotalDebt += unitsInThisTier * currentTier.renderPrice;
+              unitsToPrice -= unitsInThisTier;
             }
-
-            remainingItems -= unitsToApply;
-            currentVolumeLevel -= unitsToApply;
+            if (unitsToPrice <= 0) break;
           }
 
-          productTotalDebt -= volumeAdjustment;
-          bonusesApplied += volumeAdjustment;
+          if (qtyCompensated > 0) {
+            let remainingItems = qtyCompensated;
+            let currentVolumeLevel = totalValidSales;
+            const reversedTiers = [...productTiers].sort(
+              (a, b) => b.minVolume - a.minVolume,
+            );
+
+            for (const tier of reversedTiers) {
+              if (remainingItems <= 0) break;
+              if (currentVolumeLevel < tier.minVolume) continue;
+
+              const unitsInThisTierSpace =
+                currentVolumeLevel - tier.minVolume + 1;
+              const unitsToApply = Math.min(
+                remainingItems,
+                unitsInThisTierSpace,
+              );
+              const spread = basePrice - tier.renderPrice;
+
+              if (unitsToApply > 0 && spread > 0) {
+                const adjustment = unitsToApply * spread;
+                productTotalDebt -= adjustment;
+                bonusesApplied += adjustment;
+              }
+
+              remainingItems -= unitsToApply;
+              currentVolumeLevel -= unitsToApply;
+            }
+          }
+          bonusesApplied += basePrice * cashUnits - productTotalDebt;
         }
 
-        bonusesApplied +=
-          basePrice * cashUnits - (productTotalDebt + volumeAdjustment);
+        if (qtyCompensated > 0 && haveDiscount) {
+          voucherCompensation = qtyCompensated * discountValue;
+          productTotalDebt -= voucherCompensation;
+        }
+
+        productTotalDebt = Math.round(productTotalDebt);
+        schemeTotalDebt += Math.max(0, productTotalDebt);
+
+        itemsBreakdown.push({
+          productId,
+          productName: data.name,
+          totalSold: data.totalSold,
+          deductions: {
+            boleta: qtyBoleta,
+            transfer: qtyTransfer,
+            exchange: qtyExchange,
+          },
+          cashUnits,
+          basePrice,
+          bonuses: Math.round(bonusesApplied),
+          voucherCompensation: Math.round(voucherCompensation),
+          finalDebt: productTotalDebt,
+        });
       }
 
-      if (qtyCompensated > 0 && routeScheme.haveDiscount) {
-        voucherCompensation = qtyCompensated * routeScheme.discount!;
-
-        productTotalDebt -= voucherCompensation;
-      }
-
-      productTotalDebt = Math.round(productTotalDebt);
-      grandTotalCashRequired += Math.max(0, productTotalDebt);
-
-      itemsBreakdown.push({
-        productName: data.name,
-        totalSold: data.totalSold,
-        deductions: {
-          boleta: qtyBoleta,
-          transfer: qtyTransfer,
-          exchange: qtyExchange,
-        },
-        cashUnits: cashUnits,
-        bonuses: Math.round(bonusesApplied),
-        voucherCompensation: Math.round(voucherCompensation),
-        finalDebt: productTotalDebt,
+      schemesSummary.push({
+        schemeId,
+        schemeName: schemeDef?.name || "Sin Esquema (Precio Base)",
+        haveDiscount,
+        discountValue,
+        totalToPayForScheme: schemeTotalDebt,
+        items: itemsBreakdown,
+        routesIncluded: routesInScheme.map((r) => r.id),
       });
+
+      grandTotalCashRequired += schemeTotalDebt;
     }
 
     const routeDetails = pendingRoutes.map((route) => ({
       id: route.id,
-      closedAt: route.date,
+      closedAt: route.closedAt || route.date,
       items: route.items.map((item) => ({
         productName: item.product.name,
         initialLoad: item.initialLoad,
         returnedLoad: item.returnedLoad,
-
         soldCount: Math.max(0, item.initialLoad - (item.returnedLoad || 0)),
       })),
     }));
@@ -675,15 +711,18 @@ routesRouter.post("/settle/preview", async (req, res) => {
     return res.json({
       driverName,
       date,
-      routesIncluded: pendingRoutes.length,
-      summary: itemsBreakdown,
+      globalStatus: { paymentStatus, stockStatus },
+      totalRoutes: pendingRoutes.length,
       totalToPay: grandTotalCashRequired,
+      schemesBreakdown: schemesSummary,
       breakdownApplied: !!breakdown,
       routeDetails,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error preview:", error);
-    res.status(500).json({ error: "Error interno al calcular la rendición." });
+    res.status(500).json({
+      error: error.message || "Error interno al calcular la rendición.",
+    });
   }
 });
 
