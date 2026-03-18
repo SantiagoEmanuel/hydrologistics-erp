@@ -6,11 +6,15 @@ export type User = {
   fullName: string;
   username: string;
   role: "ADMIN" | "EMPLOYEE" | "DRIVER";
-  password: string;
+  password?: string;
 };
 
+interface LoginResponse extends User{
+  authToken: string
+}
+
 export const authService = {
-  login: async ({ username, password }: Partial<User>): Promise<User> => {
+  login: async ({ username, password }: Partial<User>): Promise<LoginResponse> => {
     if (!password || !username) {
       toast.error("Error al iniciar sesión", {
         description: "Credenciales inválidas",
@@ -22,7 +26,7 @@ export const authService = {
       const res = await api("/auth/login", {
         method: "POST",
         body: JSON.stringify({ username, password }),
-      });
+      })
 
       toast.success("Sesión iniciada");
       return await res;
@@ -39,6 +43,7 @@ export const authService = {
       });
 
       toast.success("Sesión cerrada");
+      sessionStorage.clear();
       await cookieStore.delete("auth_token");
       return await res;
     } catch (error: any) {
@@ -90,7 +95,12 @@ export const authService = {
 
   me: async (): Promise<User> => {
     try {
-      const res = await api(`/auth/me`, {});
+      const res = await api(`/auth/me`, {
+        method: "POST",
+        body: JSON.stringify({
+          authToken: JSON.parse(sessionStorage.getItem("auth_token") ?? ""),
+        }),
+      });
 
       toast.success("Sesión iniciada", {
         description: "Se a iniciado automáticamente la sesión",

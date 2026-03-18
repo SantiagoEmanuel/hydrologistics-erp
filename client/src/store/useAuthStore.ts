@@ -7,7 +7,7 @@ interface useAuthStore {
   isLoading: boolean;
   isInitialized: boolean;
 
-  login: ({ username, password }: Partial<User>) => Promise<User | null>;
+  login: ({ username, password }: User) => Promise<User | null>;
   register: (user: User) => Promise<void>;
   logout: () => Promise<void>;
   me: () => Promise<void>;
@@ -47,8 +47,15 @@ export const useAuthStore = create<useAuthStore>((set) => ({
       }
       set(() => ({
         isLoading: false,
-        user: data,
+        user: {
+          id: data.id,
+          fullName: data.fullName,
+          username: data.username,
+          role: data.role
+        },
       }));
+
+      sessionStorage.setItem("auth_token", JSON.stringify(data.authToken));
       return data;
     } catch (error: any) {
       toast.error(error.message);

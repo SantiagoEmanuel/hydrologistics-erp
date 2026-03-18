@@ -45,6 +45,7 @@ authRouter.post("/login", async (req, res) => {
       username: user.username,
       fullName: user.fullName,
       role: user.role,
+      authToken: token
     });
   } catch (error) {
     console.error(error);
@@ -110,8 +111,8 @@ authRouter.post("/logout", (req, res) => {
   res.json({ message: "Sesión cerrada" });
 });
 
-authRouter.get("/me", async (req, res) => {
-  const token = req.cookies.auth_token;
+authRouter.post("/me", async (req, res) => {
+  const token = req.cookies.auth_token ?? req.body.authToken
   if (!token) return res.status(401).json({ error: "No autenticado" });
 
   try {

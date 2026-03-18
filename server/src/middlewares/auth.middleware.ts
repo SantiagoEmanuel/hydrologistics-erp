@@ -30,14 +30,14 @@ export const authenticateToken = (
     req.user = decoded;
     next();
   } catch (error) {
-    return res.status(403).json({ error: "Token inválido o expirado" });
+    return res.status(403).json({ error: "Token inválido" });
   }
 };
 
 export const requireRole = (role: string) => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user || req.user.role !== role) {
-      return res.status(403).json({ error: "No tienes permisos para esto" });
+      return res.status(403).json({ error: "Acceso denegado: Permisos denegados" });
     }
     next();
   };
