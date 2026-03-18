@@ -36,7 +36,7 @@ authRouter.post("/login", async (req, res) => {
     res.cookie("auth_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV !== "production" ? "lax" : "none",
+      sameSite: process.env.NODE_ENV !== "production" ? "none" : "none",
       maxAge: 12 * 60 * 60 * 1000,
     });
 
@@ -89,7 +89,7 @@ authRouter.post("/register", authenticateToken, async (req, res) => {
     res.cookie("auth_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV !== "production" ? "lax" : "none",
+      sameSite: process.env.NODE_ENV !== "production" ? "none" : "none",
       maxAge: 12 * 60 * 60 * 1000,
     });
 
@@ -111,8 +111,10 @@ authRouter.post("/logout", (req, res) => {
   res.json({ message: "Sesión cerrada" });
 });
 
-authRouter.post("/me", async (req, res) => {
-  const token = req.cookies.auth_token ?? req.body.authToken
+authRouter.get("/me", async (req, res) => {
+  const token = req.cookies.auth_token ?? req.query.auth_token
+
+  console.log({cookie: req.cookies.auth_token, query: req.query.auth_token})
   if (!token) return res.status(401).json({ error: "No autenticado" });
 
   try {

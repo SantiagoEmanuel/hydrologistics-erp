@@ -95,12 +95,9 @@ export const authService = {
 
   me: async (): Promise<User> => {
     try {
-      const res = await api(`/auth/me`, {
-        method: "POST",
-        body: JSON.stringify({
-          authToken: JSON.parse(sessionStorage.getItem("auth_token") ?? ""),
-        }),
-      });
+      const res = await api(
+        `/auth/me?auth_token=${JSON.parse(sessionStorage.getItem("auth_token") ?? "")}`
+      );
 
       toast.success("Sesión iniciada", {
         description: "Se a iniciado automáticamente la sesión",
