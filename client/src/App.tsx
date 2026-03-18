@@ -19,10 +19,10 @@ import Settlements from "./pages/dashboard/routes/Settlements";
 import SalesHistory from "./pages/dashboard/sales/SalesHistory";
 
 export default function App() {
-  const { checkAuth } = useAuth();
+  const { me } = useAuth();
 
   useEffect(() => {
-    checkAuth();
+    me();
   }, []);
 
   const router = createBrowserRouter([
