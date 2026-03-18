@@ -7,7 +7,7 @@ interface useAuthStore {
   isLoading: boolean;
   isInitialized: boolean;
 
-  login: ({ username, password }: User) => Promise<User | null>;
+  login: ({ username, password }: Partial<User>) => Promise<User | null>;
   register: (user: User) => Promise<void>;
   logout: () => Promise<void>;
   me: () => Promise<void>;
