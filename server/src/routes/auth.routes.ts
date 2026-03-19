@@ -114,7 +114,6 @@ authRouter.post("/logout", (req, res) => {
 authRouter.get("/me", async (req, res) => {
   const token = req.cookies.auth_token ?? req.query.auth_token
 
-  console.log({cookie: req.cookies.auth_token, query: req.query.auth_token})
   if (!token) return res.status(401).json({ error: "No autenticado" });
 
   try {
