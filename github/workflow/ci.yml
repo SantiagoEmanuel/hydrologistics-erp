@@ -1,0 +1,42 @@
+name: CI Pipeline - HydroLogistics ERP
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  validate:
+    name: Build & Typecheck
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🛑 Clonar el repositorio
+        uses: actions/checkout@v4
+
+      - name: 📦 Instalar pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: ⚙️ Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: 📥 Instalar dependencias del Monorepo
+        run: pnpm install --frozen-lockfile 
+
+      - name: 🔍 Verificación de Tipos (Frontend)
+        run: pnpm --filter client exec tsc --noEmit
+
+      - name: 🔍 Verificación de Tipos (Backend)
+        run: pnpm --filter server exec tsc --noEmit
+
+      - name: 🏗️ Compilar Frontend (Vite)
+        run: pnpm --filter client run build
+
+      - name: 🏗️ Compilar Backend (Express/TypeScript)
+        run: pnpm --filter server run build
