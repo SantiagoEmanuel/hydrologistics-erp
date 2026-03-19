@@ -15,7 +15,7 @@ interface useAuthStore {
 }
 
 export const useAuthStore = create<useAuthStore>((set) => ({
-  user: null,
+  user: JSON.parse(sessionStorage.getItem("user") ?? JSON.stringify("")) ?? null,
   isLoading: false,
   isInitialized: false,
 
@@ -55,7 +55,16 @@ export const useAuthStore = create<useAuthStore>((set) => ({
         },
       }));
 
-      sessionStorage.setItem("auth_token", JSON.stringify(data.authToken));
+      sessionStorage.setItem(
+        "user",
+        JSON.stringify({
+          id: data.id,
+          fullName: data.fullName,
+          username: data.username,
+          role: data.role,
+        }),
+      );
+      localStorage.setItem("auth_token", JSON.stringify(data.authToken));
       return data;
     } catch (error: any) {
       toast.error(error.message);
@@ -92,6 +101,7 @@ export const useAuthStore = create<useAuthStore>((set) => ({
     set(() => ({
       user: null,
     }));
+    await authService.logout()
   },
   me: async () => {
     set({ isLoading: true });

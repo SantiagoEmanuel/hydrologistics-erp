@@ -43,7 +43,8 @@ export const authService = {
       });
 
       toast.success("Sesión cerrada");
-      sessionStorage.clear();
+      sessionStorage.clear()
+      localStorage.clear();
       await cookieStore.delete("auth_token");
       return await res;
     } catch (error: any) {
@@ -96,7 +97,7 @@ export const authService = {
   me: async (): Promise<User> => {
     try {
       const res = await api(
-        `/auth/me?auth_token=${JSON.parse(sessionStorage.getItem("auth_token") ?? "")}`
+        `/auth/me?auth_token=${JSON.parse(localStorage.getItem("auth_token") ?? JSON.stringify(""))}`,
       );
 
       toast.success("Sesión iniciada", {
