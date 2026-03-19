@@ -19,11 +19,13 @@ import Settlements from "./pages/dashboard/routes/Settlements";
 import SalesHistory from "./pages/dashboard/sales/SalesHistory";
 
 export default function App() {
-  const { me } = useAuth();
+  const {me, user} = useAuth()
 
   useEffect(() => {
-    me();
-  }, []);
+    if(!user) {
+      me()
+    }
+  },[])
 
   const router = createBrowserRouter([
     {
