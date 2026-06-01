@@ -2,6 +2,13 @@
 
 **HydroLogistics ERP** es un sistema de gestión integral diseñado para administrar simultáneamente las operaciones de Punto de Venta (mostrador) y la logística de reparto (rutas de calle), manteniendo una estricta separación de dominios y control de acceso basado en roles.
 
+## 📌 Contexto
+
+Sistema desarrollado y desplegado en producción, en uso diario por 9
+usuarios de 3 áreas (administración, ventas y cadetería) de una empresa
+distribuidora de agua. Reemplazó por completo un proceso de registro
+manual de ventas, envíos y rendiciones de caja.
+
 > [!NOTE]
 > Cualquier referencia a entidades comerciales de terceros (por ejemplo, clientes embotelladores o distribuidoras) corresponde únicamente a empresas autorizadas que operan instancias de este software, y no poseen derechos de propiedad sobre el código o el sistema.
 <!-- Advertencia escrita por Gemini 3.1 PRO -->
